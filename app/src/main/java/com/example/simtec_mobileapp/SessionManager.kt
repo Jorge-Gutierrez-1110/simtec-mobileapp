@@ -1,6 +1,7 @@
 package com.example.simtec_mobileapp
 
 import android.content.Context
+import android.util.Log
 import com.google.gson.Gson
 
 class SessionManager(context: Context) {
@@ -9,6 +10,13 @@ class SessionManager(context: Context) {
         context.getSharedPreferences("simtec_session", Context.MODE_PRIVATE)
     private val gson = Gson()
 
+    companion object {
+        private const val TAG = "SessionManager"
+    }
+
+    /**
+     * Guarda los datos de login (legacy, para compatibilidad)
+     */
     fun saveLogin(user: String) {
 
         prefs.edit()
@@ -17,13 +25,125 @@ class SessionManager(context: Context) {
             .apply()
     }
 
-    fun isLogged(): Boolean {
+    /**
+     * Guarda el login con token JWT (nuevo método)
+     */
+    fun saveLoginWithToken(
+        token: String,
+        userId: Int,
+        userName: String,
+        email: String,
+        rolId: Int,
+        rol: String,
+        empleadoId: Int,
+        permisos: List<String>
+    ) {
+        val expirationTime = System.currentTimeMillis() + (8 * 60 * 60 * 1000) // 8 horas
 
-        return prefs.getBoolean("logged", false)
+        prefs.edit()
+            .putBoolean("logged", true)
+            .putString("token", token)
+            .putInt("user_id", userId)
+            .putString("user_name", userName)
+            .putString("email", email)
+            .putInt("rol_id", rolId)
+            .putString("rol", rol)
+            .putInt("empleado_id", empleadoId)
+            .putLong("token_expiration", expirationTime)
+            .putString("permisos", gson.toJson(permisos))
+            .apply()
+
+        Log.d(TAG, "Login guardado para: $email (Token válido hasta ${expirationTime})")
     }
 
-    fun logout() {
+    /**
+     * Obtiene el token JWT guardado
+     */
+    fun getToken(): String? {
+        return if (isTokenValid()) {
+            prefs.getString("token", null)
+        } else {
+            Log.w(TAG, "Token expirado")
+            null
+        }
+    }
 
+    /**
+     * Verifica si el token sigue siendo válido
+     */
+    fun isTokenValid(): Boolean {
+        val expirationTime = prefs.getLong("token_expiration", 0)
+        val isValid = expirationTime > System.currentTimeMillis()
+        
+        if (!isValid && expirationTime > 0) {
+            Log.w(TAG, "Token expiró hace ${(System.currentTimeMillis() - expirationTime) / 1000} segundos")
+        }
+        
+        return isValid
+    }
+
+    /**
+     * Obtiene el ID del usuario
+     */
+    fun getUserId(): Int {
+        return prefs.getInt("user_id", -1)
+    }
+
+    /**
+     * Obtiene el nombre del usuario
+     */
+    fun getUserName(): String {
+        return prefs.getString("user_name", "Usuario") ?: "Usuario"
+    }
+
+    /**
+     * Obtiene el email del usuario
+     */
+    fun getEmail(): String {
+        return prefs.getString("email", "") ?: ""
+    }
+
+    /**
+     * Obtiene el rol del usuario
+     */
+    fun getRol(): String {
+        return prefs.getString("rol", "Usuario") ?: "Usuario"
+    }
+
+    /**
+     * Obtiene los permisos del usuario
+     */
+    fun getPermisos(): List<String> {
+        return try {
+            val json = prefs.getString("permisos", "[]")
+            gson.fromJson(json, Array<String>::class.java).toList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing permisos: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Verifica si el usuario tiene un permiso específico
+     */
+    fun tienePermiso(permiso: String): Boolean {
+        return getPermisos().contains(permiso)
+    }
+
+    /**
+     * Verifica si hay sesión activa
+     */
+    fun isLogged(): Boolean {
+        val hasToken = prefs.getString("token", null) != null
+        val isTokenValid = isTokenValid()
+        return hasToken && isTokenValid
+    }
+
+    /**
+     * Limpia toda la sesión
+     */
+    fun logout() {
+        Log.d(TAG, "Logout ejecutado para: ${getEmail()}")
         prefs.edit().clear().apply()
     }
 
@@ -103,16 +223,6 @@ class SessionManager(context: Context) {
     }
 
     /**
-     * Data class para un registro de asistencia
-     */
-    data class AttendanceRecord(
-        val type: String,
-        val timestamp: String,
-        val location: String,
-        val faceMatchConfidence: Float
-    )
-
-    /**
      * Guarda el último tipo de registro (Entrada/Salida)
      * Esto permite saber si el próximo debe ser entrada o salida
      */
@@ -141,4 +251,14 @@ class SessionManager(context: Context) {
         // Si el último fue "Entrada", el próximo es "Salida"
         return lastType == null || lastType == "Salida"
     }
+
+    /**
+     * Data class para un registro de asistencia
+     */
+    data class AttendanceRecord(
+        val type: String,
+        val timestamp: String,
+        val location: String,
+        val faceMatchConfidence: Float
+    )
 }
