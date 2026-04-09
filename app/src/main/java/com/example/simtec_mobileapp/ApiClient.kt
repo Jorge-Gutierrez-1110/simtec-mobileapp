@@ -43,32 +43,47 @@ class ApiClient {
                 .addHeader("Content-Type", "application/json")
                 .build()
 
-            Log.d("ApiClient", "Enviando login a: ${request.url}")
+            Log.d("ApiClient", "═══════════════════════════════════")
+            Log.d("ApiClient", "ENVIANDO LOGIN")
+            Log.d("ApiClient", "URL: ${request.url}")
+            Log.d("ApiClient", "Email: $email")
+            Log.d("ApiClient", "Password: (oculto)")
+            Log.d("ApiClient", "═══════════════════════════════════")
 
             val response = httpClient.newCall(request).execute()
 
-            Log.d("ApiClient", "Respuesta status: ${response.code}")
+            Log.d("ApiClient", "═══════════════════════════════════")
+            Log.d("ApiClient", "RESPUESTA RECIBIDA")
+            Log.d("ApiClient", "Status Code: ${response.code}")
+            Log.d("ApiClient", "Is Successful: ${response.isSuccessful}")
 
-            if (response.isSuccessful) {
-                val responseBody = response.body?.string()
-                Log.d("ApiClient", "Response body: $responseBody")
+            val responseBody = response.body?.string()
+            Log.d("ApiClient", "Response Body: $responseBody")
+            Log.d("ApiClient", "═══════════════════════════════════")
 
-                if (responseBody != null) {
+            if (responseBody != null) {
+                try {
                     val loginResponse = gson.fromJson(responseBody, LoginResponse::class.java)
-                    Log.d("ApiClient", "Login exitoso para: ${loginResponse.user?.email}")
+                    
+                    Log.d("ApiClient", "PARSEADO EXITOSAMENTE:")
+                    Log.d("ApiClient", "  success: ${loginResponse.success}")
+                    Log.d("ApiClient", "  token: ${if (loginResponse.token != null) "✓ Presente" else "✗ Null"}")
+                    Log.d("ApiClient", "  user: ${if (loginResponse.user != null) "✓ ${loginResponse.user.email}" else "✗ Null"}")
+                    Log.d("ApiClient", "  message: ${loginResponse.message}")
+                    
                     loginResponse
-                } else {
-                    Log.e("ApiClient", "Response body es null")
+                } catch (e: Exception) {
+                    Log.e("ApiClient", "❌ ERROR AL PARSEAR JSON: ${e.message}")
+                    e.printStackTrace()
                     null
                 }
             } else {
-                val errorBody = response.body?.string()
-                Log.e("ApiClient", "Error en login: ${response.code} - $errorBody")
+                Log.e("ApiClient", "❌ Response body es null")
                 null
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "Excepción en login: ${e.message}", e)
+            Log.e("ApiClient", "❌ EXCEPCIÓN EN LOGIN: ${e.message}")
             e.printStackTrace()
             null
         }

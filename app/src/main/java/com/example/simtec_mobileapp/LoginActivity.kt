@@ -2,6 +2,7 @@ package com.example.simtec_mobileapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -96,14 +97,32 @@ class LoginActivity : AppCompatActivity() {
         etEmail.isEnabled = false
         etPassword.isEnabled = false
 
+        Log.d("LoginActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        Log.d("LoginActivity", "INICIANDO LOGIN")
+        Log.d("LoginActivity", "Email: $email")
+        Log.d("LoginActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
         scope.launch {
             try {
                 // Llamar a la API
                 val response = apiClient.login(email, password)
 
+                Log.d("LoginActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                Log.d("LoginActivity", "RESPUESTA DE APICLIENT:")
+                Log.d("LoginActivity", "  Response: $response")
+                Log.d("LoginActivity", "  Success: ${response?.success}")
+                Log.d("LoginActivity", "  Token: ${response?.token?.take(20)}...")
+                Log.d("LoginActivity", "  User: ${response?.user?.email}")
+                Log.d("LoginActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
                 if (response?.success == true && response.token != null && response.user != null) {
                     // Login exitoso
                     val user = response.user!!
+
+                    Log.d("LoginActivity", "✅ LOGIN EXITOSO")
+                    Log.d("LoginActivity", "Usuario: ${user.nombre} (${user.email})")
+                    Log.d("LoginActivity", "Rol: ${user.rol}")
+                    Log.d("LoginActivity", "Permisos: ${user.permisos}")
 
                     // Guardar sesión con token
                     sessionManager.saveLoginWithToken(
@@ -129,14 +148,29 @@ class LoginActivity : AppCompatActivity() {
 
                 } else {
                     // Login fallido
+                    Log.e("LoginActivity", "❌ LOGIN FALLIDO")
+                    Log.e("LoginActivity", "  Success: ${response?.success}")
+                    Log.e("LoginActivity", "  Token null: ${response?.token == null}")
+                    Log.e("LoginActivity", "  User null: ${response?.user == null}")
+                    Log.e("LoginActivity", "  Message: ${response?.message}")
+
+                    val errorMessage = when {
+                        response == null -> "No se pudo conectar con el servidor"
+                        !response.success -> response.message ?: "Credenciales inválidas"
+                        response.token == null -> "No se recibió token"
+                        response.user == null -> "No se recibieron datos del usuario"
+                        else -> "Error desconocido"
+                    }
+                    
                     Toast.makeText(
                         this@LoginActivity,
-                        response?.message ?: "Email o contraseña incorrectos",
+                        errorMessage,
                         Toast.LENGTH_LONG
                     ).show()
                 }
 
             } catch (e: Exception) {
+                Log.e("LoginActivity", "❌ EXCEPCIÓN: ${e.message}", e)
                 Toast.makeText(
                     this@LoginActivity,
                     "Error de conexión: ${e.message}",
