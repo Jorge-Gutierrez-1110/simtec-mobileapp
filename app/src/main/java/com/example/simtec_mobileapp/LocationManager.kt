@@ -53,7 +53,12 @@ class LocationManager(private val context: Context) {
 
             // Obtenemos la última ubicación conocida (para no esperar mucho)
             val location = withContext(Dispatchers.Default) {
-                locationManager.getLastKnownLocation(provider)
+                try {
+                    locationManager.getLastKnownLocation(provider)
+                } catch (e: Exception) {
+                    Log.e("LocationManager", "Error obteniendo ubicación: ${e.message}")
+                    null
+                }
             }
 
             if (location == null) {
@@ -79,10 +84,14 @@ class LocationManager(private val context: Context) {
             }
 
             val address = addresses.first()
-            formatAddress(address)
+            val formattedAddress = formatAddress(address)
+            
+            Log.d("LocationManager", "Dirección formateada: $formattedAddress")
+            formattedAddress
 
         } catch (e: Exception) {
             Log.e("LocationManager", "Error obteniendo ubicación: ${e.message}")
+            e.printStackTrace()
             "Error obteniendo ubicación"
         }
     }
@@ -109,7 +118,7 @@ class LocationManager(private val context: Context) {
         }
 
         // Agregamos país si está disponible
-        if (!address.countryName.isNullOrEmpty()) {
+        if (!address.countryName.isNullOrEmpty() && address.countryName != "Uruguay") {
             parts.add(address.countryName)
         }
 

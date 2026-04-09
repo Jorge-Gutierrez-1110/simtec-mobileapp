@@ -111,4 +111,34 @@ class SessionManager(context: Context) {
         val location: String,
         val faceMatchConfidence: Float
     )
+
+    /**
+     * Guarda el último tipo de registro (Entrada/Salida)
+     * Esto permite saber si el próximo debe ser entrada o salida
+     */
+    fun saveLastRecordType(type: String) {
+        prefs.edit()
+            .putString("last_record_type", type)
+            .apply()
+    }
+
+    /**
+     * Obtiene el último tipo de registro guardado
+     * Si es "Entrada", el próximo debe ser "Salida" y viceversa
+     */
+    fun getLastRecordType(): String? {
+        return prefs.getString("last_record_type", null)
+    }
+
+    /**
+     * Determina si el siguiente registro debe ser Entrada o Salida
+     * basándose en el último registro guardado
+     */
+    fun shouldBeEntry(): Boolean {
+        val lastType = getLastRecordType()
+        // Si no hay último registro, es entrada
+        // Si el último fue "Salida", el próximo es "Entrada"
+        // Si el último fue "Entrada", el próximo es "Salida"
+        return lastType == null || lastType == "Salida"
+    }
 }

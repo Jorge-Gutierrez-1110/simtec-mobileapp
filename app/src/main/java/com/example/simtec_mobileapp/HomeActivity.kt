@@ -3,6 +3,7 @@ package com.example.simtec_mobileapp
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -26,8 +27,12 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var adapter: ArrayAdapter<String>
     private val history = mutableListOf<String>()
 
-    private var isEntry = true
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 1001
+        private const val PERMISSION_LOCATION_CODE = 1002
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +70,72 @@ class HomeActivity : AppCompatActivity() {
         }
 
         updateButtonText()
+
+        // Solicitar permisos en runtime si es necesario
+        requestRuntimePermissions()
+    }
+
+    /**
+     * Solicita permisos de cámara y ubicación en runtime (Android 6.0+)
+     */
+    private fun requestRuntimePermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+
+        // Verificar permisos de cámara
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.CAMERA)
+        }
+
+        // Verificar permisos de ubicación
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        // Si no hay permisos, solicitarlos
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissionsToRequest.toTypedArray(),
+                PERMISSION_REQUEST_CODE
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty()) {
+                    for (i in permissions.indices) {
+                        when (permissions[i]) {
+                            Manifest.permission.CAMERA -> {
+                                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                                    Toast.makeText(this, "Permiso de cámara otorgado", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            Manifest.permission.ACCESS_FINE_LOCATION -> {
+                                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                                    Toast.makeText(this, "Permiso de ubicación otorgado", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -164,42 +235,12 @@ class HomeActivity : AppCompatActivity() {
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ),
-                2
+                PERMISSION_LOCATION_CODE
             )
 
         } else {
 
             obtainLocationAndSaveRecord()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == 2) {
-
-            if (grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            ) {
-
-                obtainLocationAndSaveRecord()
-
-            } else {
-
-                Toast.makeText(
-                    this,
-                    "Permisos de ubicación denegados",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                // Guardamos igual sin ubicación
-                saveRegister("Ubicación no disponible")
-            }
         }
     }
 
@@ -230,6 +271,8 @@ class HomeActivity : AppCompatActivity() {
         val sdf = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
         val time = sdf.format(Date())
 
+        // Determinamos si debe ser entrada o salida basándonos en el último registro
+        val isEntry = sessionManager.shouldBeEntry()
         val type = if (isEntry) "Entrada" else "Salida"
 
         // Guardamos en SessionManager con ubicación
@@ -237,8 +280,11 @@ class HomeActivity : AppCompatActivity() {
             type = type,
             timestamp = time,
             location = location,
-            faceConfidence = 0.9f // Placeholder, en una versión mejorada pasamos el valor real
+            faceConfidence = 0.9f
         )
+
+        // Guardamos el tipo de registro para la próxima vez
+        sessionManager.saveLastRecordType(type)
 
         // Mostramos en la lista
         val record = "$type - $time\n📍 $location"
@@ -248,8 +294,6 @@ class HomeActivity : AppCompatActivity() {
         adapter.notifyDataSetChanged()
 
         saveHistory()
-
-        isEntry = !isEntry
 
         updateButtonText()
 
@@ -261,6 +305,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun updateButtonText() {
+        val isEntry = sessionManager.shouldBeEntry()
         if (isEntry) {
             btnRegister.text = "Entrada"
             btnRegister.setBackgroundTintList(
