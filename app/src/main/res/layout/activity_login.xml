@@ -65,10 +65,11 @@
                 android:layout_marginTop="20dp">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etUser"
+                    android:id="@+id/etEmail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Usuario"/>
+                    android:hint="Email"
+                    android:inputType="textEmailAddress"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -92,6 +93,14 @@
                 android:textColor="@color/white"
                 android:backgroundTint="@color/blue_medium"
                 android:layout_marginTop="20dp"/>
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"/>
 
             <TextView
                 android:layout_width="match_parent"

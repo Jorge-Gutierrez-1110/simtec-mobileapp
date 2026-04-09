@@ -1,13 +1,17 @@
 package com.example.simtec_mobileapp
 
+import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricPrompt
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.gson.Gson
+import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -19,11 +23,17 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tvWelcome: TextView
 
     private lateinit var sessionManager: SessionManager
+    private lateinit var locationManager: LocationManager
 
     private lateinit var adapter: ArrayAdapter<String>
     private val history = mutableListOf<String>()
 
-    private var isEntry = true
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
+
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 1001
+        private const val PERMISSION_LOCATION_CODE = 1002
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +41,7 @@ class HomeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_home)
 
         sessionManager = SessionManager(this)
+        locationManager = LocationManager(this)
 
         tvWelcome = findViewById(R.id.tvWelcome)
         btnLogout = findViewById(R.id.btnLogout)
@@ -58,8 +69,79 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
+
+        updateButtonText()
+
+        // Solicitar permisos en runtime si es necesario
+        requestRuntimePermissions()
     }
 
+    /**
+     * Solicita permisos de cámara y ubicación en runtime (Android 6.0+)
+     */
+    private fun requestRuntimePermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+
+        // Verificar permisos de cámara
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.CAMERA)
+        }
+
+        // Verificar permisos de ubicación
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        // Si no hay permisos, solicitarlos
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissionsToRequest.toTypedArray(),
+                PERMISSION_REQUEST_CODE
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty()) {
+                    for (i in permissions.indices) {
+                        when (permissions[i]) {
+                            Manifest.permission.CAMERA -> {
+                                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                                    Toast.makeText(this, "Permiso de cámara otorgado", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            Manifest.permission.ACCESS_FINE_LOCATION -> {
+                                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                                    Toast.makeText(this, "Permiso de ubicación otorgado", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * PASO 1: Autenticación biométrica (huella dactilar)
+     */
     private fun authenticateUser() {
 
         val executor = ContextCompat.getMainExecutor(this)
@@ -74,91 +156,139 @@ class HomeActivity : AppCompatActivity() {
                 ) {
                     super.onAuthenticationSucceeded(result)
 
-                    checkCameraPermission()
+                    // Huella verificada, ahora vamos a reconocimiento facial
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Huella verificada ✓",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    openFaceDetection()
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Huella no reconocida",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Error: $errString",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Verificación requerida")
-            .setSubtitle("Confirma tu identidad")
+            .setTitle("Paso 1: Verificación Biométrica")
+            .setSubtitle("Confirma tu huella dactilar")
             .setNegativeButtonText("Cancelar")
             .build()
 
         biometricPrompt.authenticate(promptInfo)
     }
 
-    private fun checkCameraPermission() {
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.CAMERA
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(android.Manifest.permission.CAMERA),
-                1
-            )
-
-        } else {
-
-            openCamera()
-
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == 1) {
-
-            if (grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            ) {
-
-                openCamera()
-
-            } else {
-
-                Toast.makeText(
-                    this,
-                    "Se necesita permiso de cámara",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
-
-    private fun openCamera() {
+    /**
+     * PASO 2: Reconocimiento facial
+     */
+    private fun openFaceDetection() {
 
         val intent = Intent(this, CameraActivity::class.java)
         startActivityForResult(intent, 100)
     }
 
+    /**
+     * Resultado del reconocimiento facial
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == 100 && resultCode == RESULT_OK) {
 
-            saveRegister()
+            // Cara verificada, ahora obtener ubicación y guardar registro
+            Toast.makeText(this, "Cara verificada ✓", Toast.LENGTH_SHORT).show()
+
+            checkLocationPermission()
         }
     }
 
-    private fun saveRegister() {
+    /**
+     * Verifica y solicita permisos de ubicación
+     */
+    private fun checkLocationPermission() {
+
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                PERMISSION_LOCATION_CODE
+            )
+
+        } else {
+
+            obtainLocationAndSaveRecord()
+        }
+    }
+
+    /**
+     * PASO 3: Obtener ubicación y guardar registro
+     */
+    private fun obtainLocationAndSaveRecord() {
+
+        // Mostramos loading
+        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
+
+        scope.launch {
+            try {
+                val location = locationManager.getReadableLocation()
+                saveRegister(location)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                saveRegister("Error obteniendo ubicación")
+            }
+        }
+    }
+
+    /**
+     * Guarda el registro de asistencia con ubicación
+     */
+    private fun saveRegister(location: String) {
 
         val sdf = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
         val time = sdf.format(Date())
 
+        // Determinamos si debe ser entrada o salida basándonos en el último registro
+        val isEntry = sessionManager.shouldBeEntry()
         val type = if (isEntry) "Entrada" else "Salida"
 
-        val record = "$type - $time"
+        // Guardamos en SessionManager con ubicación
+        sessionManager.saveAttendanceRecord(
+            type = type,
+            timestamp = time,
+            location = location,
+            faceConfidence = 0.9f
+        )
+
+        // Guardamos el tipo de registro para la próxima vez
+        sessionManager.saveLastRecordType(type)
+
+        // Mostramos en la lista
+        val record = "$type - $time\n📍 $location"
 
         history.add(0, record)
 
@@ -166,8 +296,17 @@ class HomeActivity : AppCompatActivity() {
 
         saveHistory()
 
-        isEntry = !isEntry
+        updateButtonText()
 
+        Toast.makeText(
+            this,
+            "Asistencia registrada ✓",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun updateButtonText() {
+        val isEntry = sessionManager.shouldBeEntry()
         if (isEntry) {
             btnRegister.text = "Entrada"
             btnRegister.setBackgroundTintList(
@@ -182,22 +321,44 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun saveHistory() {
-
         val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
-
+        val gson = Gson()
+        
+        // Guardamos como JSON array para mantener orden
+        val json = gson.toJson(history)
         prefs.edit()
-            .putStringSet("history", history.toSet())
+            .putString("history_json", json)
             .apply()
     }
 
     private fun loadHistory() {
-
         val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
+        val gson = Gson()
 
-        val saved = prefs.getStringSet("history", setOf())
-
-        history.addAll(saved!!)
+        // Primero intentamos cargar desde nuevo formato JSON
+        val savedJson = prefs.getString("history_json", null)
+        if (savedJson != null) {
+            try {
+                val loaded = gson.fromJson(savedJson, Array<String>::class.java).toList()
+                history.addAll(loaded)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            // Fallback al antiguo formato StringSet (para compatibilidad)
+            val saved = prefs.getStringSet("history", setOf())
+            if (saved != null && saved.isNotEmpty()) {
+                history.addAll(saved.toList())
+                // Guardamos en nuevo formato para futuras ejecuciones
+                saveHistory()
+            }
+        }
 
         adapter.notifyDataSetChanged()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
 }
