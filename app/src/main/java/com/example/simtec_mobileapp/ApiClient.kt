@@ -3,6 +3,8 @@ package com.example.simtec_mobileapp
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -50,7 +52,9 @@ class ApiClient {
             Log.d("ApiClient", "Password: (oculto)")
             Log.d("ApiClient", "═══════════════════════════════════")
 
-            val response = httpClient.newCall(request).execute()
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
 
             Log.d("ApiClient", "═══════════════════════════════════")
             Log.d("ApiClient", "RESPUESTA RECIBIDA")
