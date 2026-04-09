@@ -1,5 +1,6 @@
 package com.example.simtec_mobileapp
 
+import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -8,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricPrompt
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -19,11 +21,13 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tvWelcome: TextView
 
     private lateinit var sessionManager: SessionManager
+    private lateinit var locationManager: LocationManager
 
     private lateinit var adapter: ArrayAdapter<String>
     private val history = mutableListOf<String>()
 
     private var isEntry = true
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +35,7 @@ class HomeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_home)
 
         sessionManager = SessionManager(this)
+        locationManager = LocationManager(this)
 
         tvWelcome = findViewById(R.id.tvWelcome)
         btnLogout = findViewById(R.id.btnLogout)
@@ -58,8 +63,13 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
+
+        updateButtonText()
     }
 
+    /**
+     * PASO 1: Autenticación biométrica (huella dactilar)
+     */
     private fun authenticateUser() {
 
         val executor = ContextCompat.getMainExecutor(this)
@@ -74,37 +84,92 @@ class HomeActivity : AppCompatActivity() {
                 ) {
                     super.onAuthenticationSucceeded(result)
 
-                    checkCameraPermission()
+                    // Huella verificada, ahora vamos a reconocimiento facial
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Huella verificada ✓",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    openFaceDetection()
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Huella no reconocida",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Error: $errString",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Verificación requerida")
-            .setSubtitle("Confirma tu identidad")
+            .setTitle("Paso 1: Verificación Biométrica")
+            .setSubtitle("Confirma tu huella dactilar")
             .setNegativeButtonText("Cancelar")
             .build()
 
         biometricPrompt.authenticate(promptInfo)
     }
 
-    private fun checkCameraPermission() {
+    /**
+     * PASO 2: Reconocimiento facial
+     */
+    private fun openFaceDetection() {
+
+        val intent = Intent(this, CameraActivity::class.java)
+        startActivityForResult(intent, 100)
+    }
+
+    /**
+     * Resultado del reconocimiento facial
+     */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == 100 && resultCode == RESULT_OK) {
+
+            // Cara verificada, ahora obtener ubicación y guardar registro
+            Toast.makeText(this, "Cara verificada ✓", Toast.LENGTH_SHORT).show()
+
+            checkLocationPermission()
+        }
+    }
+
+    /**
+     * Verifica y solicita permisos de ubicación
+     */
+    private fun checkLocationPermission() {
 
         if (ContextCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.CAMERA
+                Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
 
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(android.Manifest.permission.CAMERA),
-                1
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                2
             )
 
         } else {
 
-            openCamera()
-
+            obtainLocationAndSaveRecord()
         }
     }
 
@@ -116,49 +181,67 @@ class HomeActivity : AppCompatActivity() {
 
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == 1) {
+        if (requestCode == 2) {
 
             if (grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             ) {
 
-                openCamera()
+                obtainLocationAndSaveRecord()
 
             } else {
 
                 Toast.makeText(
                     this,
-                    "Se necesita permiso de cámara",
+                    "Permisos de ubicación denegados",
                     Toast.LENGTH_SHORT
                 ).show()
+
+                // Guardamos igual sin ubicación
+                saveRegister("Ubicación no disponible")
             }
         }
     }
 
-    private fun openCamera() {
+    /**
+     * PASO 3: Obtener ubicación y guardar registro
+     */
+    private fun obtainLocationAndSaveRecord() {
 
-        val intent = Intent(this, CameraActivity::class.java)
-        startActivityForResult(intent, 100)
-    }
+        // Mostramos loading
+        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == 100 && resultCode == RESULT_OK) {
-
-            saveRegister()
+        scope.launch {
+            try {
+                val location = locationManager.getReadableLocation()
+                saveRegister(location)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                saveRegister("Error obteniendo ubicación")
+            }
         }
     }
 
-    private fun saveRegister() {
+    /**
+     * Guarda el registro de asistencia con ubicación
+     */
+    private fun saveRegister(location: String) {
 
         val sdf = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
         val time = sdf.format(Date())
 
         val type = if (isEntry) "Entrada" else "Salida"
 
-        val record = "$type - $time"
+        // Guardamos en SessionManager con ubicación
+        sessionManager.saveAttendanceRecord(
+            type = type,
+            timestamp = time,
+            location = location,
+            faceConfidence = 0.9f // Placeholder, en una versión mejorada pasamos el valor real
+        )
+
+        // Mostramos en la lista
+        val record = "$type - $time\n📍 $location"
 
         history.add(0, record)
 
@@ -168,6 +251,16 @@ class HomeActivity : AppCompatActivity() {
 
         isEntry = !isEntry
 
+        updateButtonText()
+
+        Toast.makeText(
+            this,
+            "Asistencia registrada ✓",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun updateButtonText() {
         if (isEntry) {
             btnRegister.text = "Entrada"
             btnRegister.setBackgroundTintList(
@@ -199,5 +292,10 @@ class HomeActivity : AppCompatActivity() {
         history.addAll(saved!!)
 
         adapter.notifyDataSetChanged()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
 }
