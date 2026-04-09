@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricPrompt
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.gson.Gson
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -320,21 +321,38 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun saveHistory() {
-
         val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
-
+        val gson = Gson()
+        
+        // Guardamos como JSON array para mantener orden
+        val json = gson.toJson(history)
         prefs.edit()
-            .putStringSet("history", history.toSet())
+            .putString("history_json", json)
             .apply()
     }
 
     private fun loadHistory() {
-
         val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
+        val gson = Gson()
 
-        val saved = prefs.getStringSet("history", setOf())
-
-        history.addAll(saved!!)
+        // Primero intentamos cargar desde nuevo formato JSON
+        val savedJson = prefs.getString("history_json", null)
+        if (savedJson != null) {
+            try {
+                val loaded = gson.fromJson(savedJson, Array<String>::class.java).toList()
+                history.addAll(loaded)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            // Fallback al antiguo formato StringSet (para compatibilidad)
+            val saved = prefs.getStringSet("history", setOf())
+            if (saved != null && saved.isNotEmpty()) {
+                history.addAll(saved.toList())
+                // Guardamos en nuevo formato para futuras ejecuciones
+                saveHistory()
+            }
+        }
 
         adapter.notifyDataSetChanged()
     }
