@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -37,6 +38,7 @@ class CameraActivity : AppCompatActivity() {
     private var lastDetectedFace: FaceDetectionManager.FaceTemplate? = null
     private var confirmationCount = 0
 
+    @OptIn(ExperimentalGetImage::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_camera)
@@ -115,6 +117,7 @@ class CameraActivity : AppCompatActivity() {
     /**
      * Analiza cada frame para detectar caras
      */
+    @OptIn(ExperimentalGetImage::class)
     private fun detectFaceInFrame(imageProxy: ImageProxy) {
         if (isProcessing) {
             imageProxy.close()
