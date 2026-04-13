@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">simtec-mobileapp</string>
+    <string name="app_name">HRMS Portal</string>
+    <string name="login_title">Iniciar sesión</string>
+    <string name="login_subtitle">Accede a tu cuenta</string>
+    <string name="fingerprint_title">Huella digital</string>
+    <string name="fingerprint_subtitle">Toca para acceder rápidamente</string>
+    <string name="btn_login">Ingresar</string>
+    <string name="or_use_fingerprint">o usa tu huella digital</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Contraseña</string>
+    <string name="remember_password">Recordar contraseña</string>
+    <string name="forgot_password">¿Olvidé mi contraseña?</string>
+    <string name="forgot_password_url">https://simtec-test.com/recuperar-password</string>
 </resources>

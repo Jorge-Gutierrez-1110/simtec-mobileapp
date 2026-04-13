@@ -104,6 +104,24 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Guarda el email del último login para usar con huella
+     * Se guarda aunque la sesión expire, para poder usar huella la próxima vez
+     */
+    fun saveLastEmail(email: String) {
+        prefs.edit()
+            .putString("saved_email", email)
+            .apply()
+        Log.d(TAG, "Email guardado para huella: $email")
+    }
+
+    /**
+     * Obtiene el email guardado para huella
+     */
+    fun getSavedEmail(): String {
+        return prefs.getString("saved_email", "") ?: ""
+    }
+
+    /**
      * Obtiene el rol del usuario
      */
     fun getRol(): String {

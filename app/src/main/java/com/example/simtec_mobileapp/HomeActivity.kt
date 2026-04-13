@@ -75,6 +75,7 @@ class HomeActivity : AppCompatActivity() {
         loadHistory()
         updateButtonText()
         updateLastRecordText()
+        applyRolePermissions()
         requestRuntimePermissions()
     }
 
@@ -142,24 +143,32 @@ class HomeActivity : AppCompatActivity() {
                     authenticateUser()
                     true
                 }
-                R.id.nav_chat -> {
-                    Toast.makeText(this, "Próximamente", Toast.LENGTH_SHORT).show()
-                    drawerLayout.closeDrawer(GravityCompat.START)
+                R.id.nav_nomina -> {
+                    showModuleComingSoon("Nómina")
                     true
                 }
                 R.id.nav_reports -> {
-                    Toast.makeText(this, "Próximamente", Toast.LENGTH_SHORT).show()
-                    drawerLayout.closeDrawer(GravityCompat.START)
+                    showModuleComingSoon("Centro de Reportes")
+                    true
+                }
+                R.id.nav_monitor -> {
+                    showModuleComingSoon("Monitor en Vivo")
+                    true
+                }
+                R.id.nav_expenses -> {
+                    showModuleComingSoon("Control de Gastos")
+                    true
+                }
+                R.id.nav_chat -> {
+                    showModuleComingSoon("Mensajes")
                     true
                 }
                 R.id.nav_profile -> {
-                    Toast.makeText(this, "Próximamente", Toast.LENGTH_SHORT).show()
-                    drawerLayout.closeDrawer(GravityCompat.START)
+                    showModuleComingSoon("Mi Perfil")
                     true
                 }
                 R.id.nav_settings -> {
-                    Toast.makeText(this, "Próximamente", Toast.LENGTH_SHORT).show()
-                    drawerLayout.closeDrawer(GravityCompat.START)
+                    showModuleComingSoon("Configuración")
                     true
                 }
                 R.id.nav_logout -> {
@@ -170,6 +179,42 @@ class HomeActivity : AppCompatActivity() {
                 else -> false
             }
         }
+    }
+
+    private fun applyRolePermissions() {
+        val rol = sessionManager.getRol().lowercase()
+        val isAdmin = rol == "admin" || rol == "administrador" || rol == "supervisor"
+
+        val menu = navigationView.menu
+
+        val adminHeader = menu.findItem(R.id.navAdminHeader)
+        if (adminHeader != null) {
+            adminHeader.isVisible = isAdmin
+        }
+
+        val itemsToShowOnlyAdmin = listOf(
+            R.id.nav_nomina,
+            R.id.nav_reports,
+            R.id.nav_monitor,
+            R.id.nav_expenses
+        )
+
+        for (itemId in itemsToShowOnlyAdmin) {
+            val item = menu.findItem(itemId)
+            if (item != null) {
+                item.isVisible = isAdmin
+                item.isEnabled = isAdmin
+            }
+        }
+
+        if (isAdmin) {
+            tvSubtitle.text = "Rol: $rol (Admin)"
+        }
+    }
+
+    private fun showModuleComingSoon(moduleName: String) {
+        drawerLayout.closeDrawer(GravityCompat.START)
+        Toast.makeText(this, "$moduleName - Próximamente", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupViews() {
