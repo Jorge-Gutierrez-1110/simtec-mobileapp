@@ -90,6 +90,13 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Obtiene el ID del empleado
+     */
+    fun getEmpleadoId(): Int {
+        return prefs.getInt("empleado_id", -1)
+    }
+
+    /**
      * Obtiene el nombre del usuario
      */
     fun getUserName(): String {
@@ -163,6 +170,16 @@ class SessionManager(context: Context) {
     fun logout() {
         Log.d(TAG, "Logout ejecutado para: ${getEmail()}")
         prefs.edit().clear().apply()
+    }
+
+    /**
+     * Limpia los datos de asistencia (para nuevo login)
+     */
+    fun clearAttendanceData() {
+        prefs.edit()
+            .remove("attendance_records_json")
+            .remove("last_record_type")
+            .apply()
     }
 
     /**

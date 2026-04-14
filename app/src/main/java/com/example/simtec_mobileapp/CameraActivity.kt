@@ -21,6 +21,11 @@ import java.util.concurrent.Executors
 
 class CameraActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_LOCATION = "extra_location"
+        const val RESULT_LOCATION = "result_location"
+    }
+
     private lateinit var previewView: PreviewView
     private lateinit var imageCapture: ImageCapture
     private lateinit var cameraExecutor: ExecutorService
@@ -37,6 +42,7 @@ class CameraActivity : AppCompatActivity() {
 
     private var lastDetectedFace: FaceDetectionManager.FaceTemplate? = null
     private var confirmationCount = 0
+    private var currentLocation: String = ""
 
     @OptIn(ExperimentalGetImage::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +53,8 @@ class CameraActivity : AppCompatActivity() {
         tvFaceStatus = findViewById(R.id.tvFaceStatus)
         tvConfidence = findViewById(R.id.tvConfidence)
         btnConfirm = findViewById(R.id.btnConfirm)
+
+        currentLocation = intent.getStringExtra(EXTRA_LOCATION) ?: ""
 
         faceDetectionManager = FaceDetectionManager()
         sessionManager = SessionManager(this)
@@ -204,12 +212,12 @@ class CameraActivity : AppCompatActivity() {
                 tvConfidence.text = "Confianza: $percentConfidence%"
 
                 when {
-                    confidence >= 0.75f -> {
+                    confidence >= 0.5f -> {
                         tvFaceStatus.text = "✓ Cara identificada correctamente"
                         tvFaceStatus.setTextColor(getColor(android.R.color.holo_green_light))
                         confirmationCount++
                     }
-                    confidence >= 0.6f -> {
+                    confidence >= 0.35f -> {
                         tvFaceStatus.text = "~ Cara similar, pero no es seguro"
                         tvFaceStatus.setTextColor(getColor(android.R.color.holo_orange_light))
                         confirmationCount = maxOf(0, confirmationCount - 1)
@@ -237,7 +245,9 @@ class CameraActivity : AppCompatActivity() {
      * Confirma la identidad y retorna al HomeActivity
      */
     private fun confirmAndExit() {
-        setResult(Activity.RESULT_OK)
+        val returnIntent = intent
+        returnIntent.putExtra(RESULT_LOCATION, currentLocation)
+        setResult(Activity.RESULT_OK, returnIntent)
         finish()
     }
 

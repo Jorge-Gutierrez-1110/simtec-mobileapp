@@ -2,168 +2,410 @@
 <androidx.drawerlayout.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
+    android:fitsSystemWindows="false"
     android:background="@color/background">
 
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="false">
 
-        <com.google.android.material.appbar.AppBarLayout
+        <!-- HEADER AZUL OSCURO -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/headerLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/blue_dark">
+            android:background="@color/blue_dark"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="56dp"
+            android:paddingBottom="24dp"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <androidx.appcompat.widget.Toolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="@color/blue_dark"
-                app:navigationIcon="@android:drawable/ic_menu_compass"
-                app:title="Simtec"
-                app:titleTextColor="@color/white"/>
+            <!-- Menú Hamburguesa -->
+            <ImageButton
+                android:id="@+id/btnMenu"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_menu"
+                android:contentDescription="Menú"
+                android:padding="10dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
-        </com.google.android.material.appbar.AppBarLayout>
+            <!-- Avatar de Usuario -->
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/ivProfile"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:src="@drawable/circle_profile"
+                app:civ_border_width="2dp"
+                app:civ_border_color="@color/white"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/background"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-            <!-- TARJETA DE BIENVENIDA -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/blue_dark">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:id="@+id/tvWelcome"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Hola Usuario"
-                        android:textColor="@color/white"
-                        android:textSize="20sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/tvSubtitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Rol: Empleado"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:layout_marginTop="4dp"/>
-
-                    <TextView
-                        android:id="@+id/tvDateTime"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Fecha y hora actual"
-                        android:textColor="@color/white"
-                        android:textSize="12sp"
-                        android:alpha="0.8"
-                        android:layout_marginTop="8dp"/>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- TARJETA DEL BOTÓN ENTRADA/SALIDA -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginTop="8dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="8dp"
-                app:cardBackgroundColor="@color/white">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="32dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Registrar Asistencia"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"/>
-
-                    <Button
-                        android:id="@+id/btnRegister"
-                        android:layout_width="140dp"
-                        android:layout_height="140dp"
-                        android:layout_marginTop="16dp"
-                        android:text="Entrada"
-                        android:textColor="@color/white"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:backgroundTint="@color/green_entry"/>
-
-                    <TextView
-                        android:id="@+id/tvLastRecord"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="Sin registros hoy"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"/>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- HISTORIAL -->
+            <!-- Nombre y Rol -->
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tvUserName"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Últimos registros"
-                android:textSize="16sp"
+                android:text="Hector Olivares"
+                android:textColor="@color/white"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:paddingStart="16dp"
-                android:paddingTop="24dp"
-                android:paddingBottom="8dp"/>
+                android:gravity="end"
+                android:layout_marginEnd="12dp"
+                android:fontFamily="sans-serif-medium"
+                app:layout_constraintEnd_toStartOf="@id/ivProfile"
+                app:layout_constraintTop_toTopOf="@id/ivProfile"
+                app:layout_constraintBottom_toTopOf="@id/tvUserRole"
+                app:layout_constraintVertical_chainStyle="packed"/>
 
-            <ListView
-                android:id="@+id/listHistory"
+            <TextView
+                android:id="@+id/tvUserRole"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Admin"
+                android:textColor="@color/text_light"
+                android:textSize="14sp"
+                android:gravity="end"
+                android:layout_marginEnd="12dp"
+                android:letterSpacing="0.02"
+                app:layout_constraintEnd_toStartOf="@id/ivProfile"
+                app:layout_constraintTop_toBottomOf="@id/tvUserName"
+                app:layout_constraintBottom_toBottomOf="@id/ivProfile"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- CONTENIDO SCROLL -->
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:fillViewport="true"
+            app:layout_constraintTop_toBottomOf="@id/headerLayout"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:divider="@color/border"
-                android:dividerHeight="1dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"/>
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
 
-        </LinearLayout>
+                <!-- TÍTULO BIENVENIDA -->
+                <TextView
+                    android:id="@+id/tvWelcome"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Hola Hector, registra tu asistencia con un toque"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginBottom="20dp"/>
 
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+                <!-- BANNER ÉXITO -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardSuccessBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/green_mint">
 
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/circle_success">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_check"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:id="@+id/tvSuccessTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Entrada registrada."
+                                android:textColor="@color/green_success"
+                                android:textSize="15sp"
+                                android:textStyle="bold"/>
+
+                            <TextView
+                                android:id="@+id/tvSuccessTime"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="31 ene, 2026 a las 7:58 AM"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- TARJETA PRINCIPAL DE ACCIÓN -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="6dp"
+                    app:cardBackgroundColor="@color/white">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="32dp">
+
+                        <!-- BOTÓN CIRCULAR 3D -->
+                        <FrameLayout
+                            android:id="@+id/btnRegisterContainer"
+                            android:layout_width="140dp"
+                            android:layout_height="140dp"
+                            android:background="@drawable/gradient_green_3d"
+                            android:elevation="8dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:src="@drawable/ic_clock"
+                                    app:tint="@color/white"/>
+
+                                <TextView
+                                    android:id="@+id/tvBtnRegister"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Registrar Salida"
+                                    android:textColor="@color/white"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:gravity="center"
+                                    android:layout_marginTop="10dp"/>
+                            </LinearLayout>
+                        </FrameLayout>
+
+                        <!-- INDICADOR ÚLTIMO REGISTRO -->
+                        <LinearLayout
+                            android:id="@+id/layoutLastRecord"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/pill_shape"
+                            android:layout_marginTop="24dp">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:src="@drawable/ic_clock_gray"/>
+
+                            <TextView
+                                android:id="@+id/tvLastRecord"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Último registro: 07 abr 2026, 8:00 AM"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp"
+                                android:layout_marginStart="8dp"/>
+                        </LinearLayout>
+
+                        <!-- HINT SALIDA -->
+                        <TextView
+                            android:id="@+id/tvExitHint"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Registra tu salida cuando termines tu día laboral."
+                            android:textColor="@color/text_gray"
+                            android:textSize="13sp"
+                            android:gravity="center"
+                            android:layout_marginTop="20dp"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- CARDS ENTRADA Y SALIDA -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp">
+
+                    <!-- CARD ENTRADA -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@color/white">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="20dp"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Entrada"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold"/>
+
+                            <FrameLayout
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:layout_marginTop="12dp"
+                                android:layout_marginBottom="12dp">
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/circle_green_entry"/>
+
+                                <ImageView
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_arrow_up"
+                                    android:scaleType="centerInside"/>
+                            </FrameLayout>
+
+                            <TextView
+                                android:id="@+id/tvEntryStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="8:00 AM"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp"/>
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- CARD SALIDA -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@color/white">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="20dp"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Salida"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold"/>
+
+                            <FrameLayout
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:layout_marginTop="12dp"
+                                android:layout_marginBottom="12dp">
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/circle_red_exit"/>
+
+                                <ImageView
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_arrow_down"
+                                    android:scaleType="centerInside"/>
+                            </FrameLayout>
+
+                            <TextView
+                                android:id="@+id/tvExitStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="6:00 PM"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp"/>
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+                </LinearLayout>
+
+                <!-- SECCIÓN HISTORIAL -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Últimos 3 registros"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="28dp"
+                    android:layout_marginBottom="12dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"/>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="24dp"/>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- NAVIGATION VIEW con Edge-to-Edge -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigationView"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="true"
+        android:fitsSystemWindows="false"
         android:background="@color/white"
+        app:insetForeground="@android:color/transparent"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/nav_menu"/>
 

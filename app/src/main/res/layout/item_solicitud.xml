@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="6dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header: Folio, Fecha, Estatus -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvFolio"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="#NOM-1"
+                android:textColor="@color/primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvEstatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pendiente"
+                android:textSize="11sp"
+                android:textColor="@color/white"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:background="@drawable/bg_status_pending" />
+
+        </LinearLayout>
+
+        <!-- Empleado -->
+        <TextView
+            android:id="@+id/tvEmpleado"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Juan Pérez"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp" />
+
+        <!-- Tipo / Concepto -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvTipo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Percepción"
+                android:textSize="11sp"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:background="@drawable/bg_status_success" />
+
+            <TextView
+                android:id="@+id/tvConcepto"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bono de productividad"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+        <!-- Periodo -->
+        <TextView
+            android:id="@+id/tvPeriodo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Periodo: Quincena 01"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- Monto -->
+        <TextView
+            android:id="@+id/tvMonto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="$1,000.00"
+            android:textColor="@color/green_entry"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="end"
+            android:layout_marginTop="8dp" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

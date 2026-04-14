@@ -27,40 +27,22 @@
             <item
                 android:id="@+id/nav_nomina"
                 android:icon="@android:drawable/ic_menu_agenda"
-                android:title="Nómina"
-                android:enabled="false"/>
+                android:title="Nómina"/>
 
             <item
-                android:id="@+id/nav_reports"
-                android:icon="@android:drawable/ic_menu_report_image"
-                android:title="Centro de Reportes"
-                android:enabled="false"/>
+                android:id="@+id/nav_solicitudes"
+                android:icon="@android:drawable/ic_menu_edit"
+                android:title="Centro de Aprobaciones"/>
+
+            <item
+                android:id="@+id/nav_expenses"
+                android:icon="@android:drawable/ic_menu_manage"
+                android:title="Control de Gastos"/>
 
             <item
                 android:id="@+id/nav_monitor"
                 android:icon="@android:drawable/ic_menu_view"
                 android:title="Monitor en Vivo"
-                android:enabled="false"/>
-
-            <item
-                android:id="@+id/nav_expenses"
-                android:icon="@android:drawable/ic_menu_manage"
-                android:title="Control de Gastos"
-                android:enabled="false"/>
-
-        </menu>
-
-    </item>
-
-    <!-- CHAT (PARA TODOS) -->
-    <item android:title="Comunicación">
-
-        <menu>
-
-            <item
-                android:id="@+id/nav_chat"
-                android:icon="@android:drawable/ic_dialog_email"
-                android:title="Mensajes"
                 android:enabled="false"/>
 
         </menu>
@@ -75,13 +57,7 @@
             <item
                 android:id="@+id/nav_profile"
                 android:icon="@android:drawable/ic_menu_myplaces"
-                android:title="Mi Perfil"
-                android:enabled="false"/>
-
-            <item
-                android:id="@+id/nav_settings"
-                android:icon="@android:drawable/ic_menu_preferences"
-                android:title="Configuración"/>
+                android:title="Mi Perfil"/>
 
             <item
                 android:id="@+id/nav_logout"

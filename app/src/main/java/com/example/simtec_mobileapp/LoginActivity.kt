@@ -132,8 +132,7 @@ class LoginActivity : AppCompatActivity() {
 
                     Toast.makeText(this@LoginActivity, "¡Bienvenido ${user.nombre}!", Toast.LENGTH_SHORT).show()
 
-                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-                    finish()
+                    goToHome()
 
                 } else {
                     val errorMessage = when {
@@ -193,8 +192,7 @@ class LoginActivity : AppCompatActivity() {
 
                     Toast.makeText(this@LoginActivity, "¡Bienvenido ${user.nombre}!", Toast.LENGTH_SHORT).show()
 
-                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-                    finish()
+                    goToHome()
 
                 } else {
                     Toast.makeText(this@LoginActivity, "Error al iniciar sesión", Toast.LENGTH_SHORT).show()
@@ -301,6 +299,12 @@ class LoginActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
+    }
+
+    private fun goToHome() {
+        sessionManager.clearAttendanceData()
+        startActivity(Intent(this, HomeActivity::class.java))
+        finish()
     }
 
     private fun loadSavedCredentials() {

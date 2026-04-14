@@ -71,5 +71,6 @@ dependencies {
     implementation("androidx.drawerlayout:drawerlayout:1.2.0")
     implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("de.hdodenhof:circleimageview:3.1.0")
 
 }

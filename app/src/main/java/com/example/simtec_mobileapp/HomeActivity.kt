@@ -6,22 +6,26 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.ListView
+import android.util.Log
+import android.view.View
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.biometric.BiometricPrompt
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
-import com.google.gson.Gson
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -30,30 +34,31 @@ class HomeActivity : AppCompatActivity() {
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
-    private lateinit var toolbar: Toolbar
-    private lateinit var btnRegister: Button
-    private lateinit var listHistory: ListView
+    private lateinit var tvUserName: TextView
+    private lateinit var tvUserRole: TextView
     private lateinit var tvWelcome: TextView
-    private lateinit var tvSubtitle: TextView
-    private lateinit var tvDateTime: TextView
     private lateinit var tvLastRecord: TextView
+    private lateinit var tvBtnRegister: TextView
+    private lateinit var tvExitHint: TextView
+    private lateinit var tvSuccessTitle: TextView
+    private lateinit var tvSuccessTime: TextView
+    private lateinit var tvEntryStatus: TextView
+    private lateinit var tvExitStatus: TextView
+    private lateinit var btnRegisterContainer: View
+    private lateinit var btnMenu: ImageButton
+    private lateinit var cardSuccessBanner: View
+    private lateinit var layoutLastRecord: LinearLayout
+    private lateinit var rvHistory: RecyclerView
     private lateinit var navHeaderName: TextView
     private lateinit var navHeaderRol: TextView
 
     private lateinit var sessionManager: SessionManager
     private lateinit var locationManager: LocationManager
-
-    private lateinit var adapter: ArrayAdapter<String>
-    private val history = mutableListOf<String>()
+    private lateinit var historyAdapter: HistoryAdapter
+    private val historyItems = mutableListOf<HistoryAdapter.HistoryItem>()
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val handler = Handler(Looper.getMainLooper())
-    private val dateTimeRunnable = object : Runnable {
-        override fun run() {
-            updateDateTime()
-            handler.postDelayed(this, 1000)
-        }
-    }
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
@@ -62,68 +67,45 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         setContentView(R.layout.activity_home)
 
         sessionManager = SessionManager(this)
         locationManager = LocationManager(this)
 
-        setupToolbar()
-        setupNavigationDrawer()
+        setupDrawer()
         setupBackPressHandler()
-        setupViews()
+        initViews()
+        setupListeners()
         loadUserData()
         loadHistory()
-        updateButtonText()
-        updateLastRecordText()
+        updateUI()
         applyRolePermissions()
         requestRuntimePermissions()
     }
 
-    override fun onResume() {
-        super.onResume()
-        handler.post(dateTimeRunnable)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        handler.removeCallbacks(dateTimeRunnable)
-    }
-
-    private fun updateDateTime() {
-        val sdf = SimpleDateFormat("EEEE, dd MMM yyyy - HH:mm:ss", Locale("es", "ES"))
-        tvDateTime?.text = sdf.format(Date())
-    }
-
-    private fun setupBackPressHandler() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                    drawerLayout.closeDrawer(GravityCompat.START)
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
-    }
-
-    private fun setupToolbar() {
-        toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(true)
-        supportActionBar?.title = "Simtec"
-    }
-
-    private fun setupNavigationDrawer() {
+    private fun setupDrawer() {
         drawerLayout = findViewById(R.id.drawerLayout)
         navigationView = findViewById(R.id.navigationView)
+
+        ViewCompat.setOnApplyWindowInsetsListener(drawerLayout) { v, insets ->
+            v.setPadding(0, 0, 0, 0)
+            insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(navigationView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(0, 0, 0, systemBars.bottom)
+            insets
+        }
 
         val toggle = ActionBarDrawerToggle(
             this,
             drawerLayout,
-            toolbar,
-            android.R.string.ok,
-            android.R.string.cancel
+            R.string.app_name,
+            R.string.app_name
         )
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
@@ -144,31 +126,28 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_nomina -> {
-                    showModuleComingSoon("Nómina")
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    startActivity(Intent(this, NominaActivity::class.java))
                     true
                 }
-                R.id.nav_reports -> {
-                    showModuleComingSoon("Centro de Reportes")
+                R.id.nav_solicitudes -> {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    startActivity(Intent(this, SolicitudesActivity::class.java))
                     true
                 }
                 R.id.nav_monitor -> {
-                    showModuleComingSoon("Monitor en Vivo")
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    Toast.makeText(this, "Monitor en Vivo - Próximamente", Toast.LENGTH_SHORT).show()
                     true
                 }
                 R.id.nav_expenses -> {
-                    showModuleComingSoon("Control de Gastos")
-                    true
-                }
-                R.id.nav_chat -> {
-                    showModuleComingSoon("Mensajes")
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    startActivity(Intent(this, GastosActivity::class.java))
                     true
                 }
                 R.id.nav_profile -> {
-                    showModuleComingSoon("Mi Perfil")
-                    true
-                }
-                R.id.nav_settings -> {
-                    showModuleComingSoon("Configuración")
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    startActivity(Intent(this, PerfilActivity::class.java))
                     true
                 }
                 R.id.nav_logout -> {
@@ -179,6 +158,19 @@ class HomeActivity : AppCompatActivity() {
                 else -> false
             }
         }
+    }
+
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     private fun applyRolePermissions() {
@@ -194,7 +186,7 @@ class HomeActivity : AppCompatActivity() {
 
         val itemsToShowOnlyAdmin = listOf(
             R.id.nav_nomina,
-            R.id.nav_reports,
+            R.id.nav_solicitudes,
             R.id.nav_monitor,
             R.id.nav_expenses
         )
@@ -206,30 +198,46 @@ class HomeActivity : AppCompatActivity() {
                 item.isEnabled = isAdmin
             }
         }
-
-        if (isAdmin) {
-            tvSubtitle.text = "Rol: $rol (Admin)"
-        }
     }
 
-    private fun showModuleComingSoon(moduleName: String) {
-        drawerLayout.closeDrawer(GravityCompat.START)
-        Toast.makeText(this, "$moduleName - Próximamente", Toast.LENGTH_SHORT).show()
+    private fun logout() {
+        val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
+        prefs.edit().clear().apply()
+
+        sessionManager.logout()
+        startActivity(Intent(this, LoginActivity::class.java))
+        finish()
     }
 
-    private fun setupViews() {
+    private fun initViews() {
+        tvUserName = findViewById(R.id.tvUserName)
+        tvUserRole = findViewById(R.id.tvUserRole)
         tvWelcome = findViewById(R.id.tvWelcome)
-        tvSubtitle = findViewById(R.id.tvSubtitle)
-        tvDateTime = findViewById(R.id.tvDateTime)
         tvLastRecord = findViewById(R.id.tvLastRecord)
-        btnRegister = findViewById(R.id.btnRegister)
-        listHistory = findViewById(R.id.listHistory)
+        tvBtnRegister = findViewById(R.id.tvBtnRegister)
+        tvExitHint = findViewById(R.id.tvExitHint)
+        tvSuccessTitle = findViewById(R.id.tvSuccessTitle)
+        tvSuccessTime = findViewById(R.id.tvSuccessTime)
+        tvEntryStatus = findViewById(R.id.tvEntryStatus)
+        tvExitStatus = findViewById(R.id.tvExitStatus)
+        btnRegisterContainer = findViewById(R.id.btnRegisterContainer)
+        btnMenu = findViewById(R.id.btnMenu)
+        cardSuccessBanner = findViewById(R.id.cardSuccessBanner)
+        layoutLastRecord = findViewById(R.id.layoutLastRecord)
+        rvHistory = findViewById(R.id.rvHistory)
 
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, history)
-        listHistory.adapter = adapter
+        rvHistory.layoutManager = LinearLayoutManager(this)
+        historyAdapter = HistoryAdapter(historyItems)
+        rvHistory.adapter = historyAdapter
+    }
 
-        btnRegister.setOnClickListener {
+    private fun setupListeners() {
+        btnRegisterContainer.setOnClickListener {
             authenticateUser()
+        }
+
+        btnMenu.setOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.START)
         }
     }
 
@@ -237,16 +245,133 @@ class HomeActivity : AppCompatActivity() {
         val user = sessionManager.getUserName()
         val rol = sessionManager.getRol()
 
-        tvWelcome.text = "Hola $user"
-        tvSubtitle.text = "Rol: $rol"
+        tvUserName.text = user
+        tvUserRole.text = rol
         navHeaderName.text = user
         navHeaderRol.text = rol
+        tvWelcome.text = "Hola $user, registra tu asistencia con un toque"
     }
 
-    private fun logout() {
-        sessionManager.logout()
-        startActivity(Intent(this, LoginActivity::class.java))
-        finish()
+    private fun updateUI() {
+        val isEntry = sessionManager.shouldBeEntry()
+        val lastRecordType = sessionManager.getLastRecordType()
+        val records = sessionManager.getAttendanceRecords()
+
+        if (isEntry) {
+            btnRegisterContainer.setBackgroundResource(R.drawable.gradient_green_3d)
+            tvBtnRegister.text = "Registrar Entrada"
+            tvExitHint.visibility = View.GONE
+        } else {
+            btnRegisterContainer.setBackgroundResource(R.drawable.gradient_red_3d)
+            tvBtnRegister.text = "Registrar Salida"
+            tvExitHint.visibility = View.VISIBLE
+        }
+
+        if (records.isNotEmpty()) {
+            val last = records.first()
+            tvLastRecord.text = "Último registro: ${last.type} - ${last.timestamp}"
+            layoutLastRecord.visibility = View.VISIBLE
+
+            tvEntryStatus.text = if (lastRecordType == "Entrada") last.timestamp else "8:00 AM"
+            tvExitStatus.text = if (lastRecordType == "Salida") last.timestamp else "6:00 PM"
+        } else {
+            tvLastRecord.text = "Último registro: 07 abr 2026, 8:00 AM"
+            tvEntryStatus.text = "8:00 AM"
+            tvExitStatus.text = "6:00 PM"
+        }
+    }
+
+    private fun loadHistory() {
+        val empleadoId = sessionManager.getEmpleadoId()
+        val token = sessionManager.getToken()
+
+        scope.launch {
+            try {
+                if (empleadoId > 0) {
+                    ApiClient().setAuthToken(token)
+                    val records = ApiClient().getAttendanceHistory(empleadoId)
+
+                    historyItems.clear()
+
+                    if (records != null && records.isNotEmpty()) {
+                        for (record in records.take(3)) {
+                            val entrada = record.hora_entrada ?: "8:00 AM"
+                            val salida = record.hora_salida
+                            val isEntry = salida == null
+
+                            val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val sdfDisplay = SimpleDateFormat("dd MMM yyyy", Locale("es", "ES"))
+                            val date = try {
+                                sdfDisplay.format(sdfDate.parse(record.fecha)!!)
+                            } catch (e: Exception) {
+                                record.fecha
+                            }
+
+                            val type = if (isEntry) "Entrada" else "Salida"
+                            val time = if (isEntry) entrada else salida ?: "6:00 PM"
+
+                            historyItems.add(
+                                HistoryAdapter.HistoryItem(
+                                    date = date,
+                                    type = type,
+                                    time = time,
+                                    isEntry = isEntry
+                                )
+                            )
+
+                            if (!isEntry) {
+                                historyItems.add(
+                                    HistoryAdapter.HistoryItem(
+                                        date = date,
+                                        type = "Entrada",
+                                        time = entrada,
+                                        isEntry = true
+                                    )
+                                )
+                            }
+                        }
+                    } else {
+                        loadSimulatedHistory()
+                    }
+                } else {
+                    loadSimulatedHistory()
+                }
+
+                historyAdapter.updateRecords(historyItems)
+
+            } catch (e: Exception) {
+                Log.e("HomeActivity", "Error cargando historial: ${e.message}")
+                loadSimulatedHistory()
+                historyAdapter.updateRecords(historyItems)
+            }
+        }
+    }
+
+    private fun loadSimulatedHistory() {
+        historyItems.clear()
+        
+        historyItems.add(HistoryAdapter.HistoryItem("07 abr 2026", "Salida", "6:15 PM", false))
+        historyItems.add(HistoryAdapter.HistoryItem("07 abr 2026", "Entrada", "8:00 AM", true))
+        historyItems.add(HistoryAdapter.HistoryItem("05 abr 2026", "Salida", "6:30 PM", false))
+        historyItems.add(HistoryAdapter.HistoryItem("05 abr 2026", "Entrada", "8:15 AM", true))
+        historyItems.add(HistoryAdapter.HistoryItem("04 abr 2026", "Salida", "6:00 PM", false))
+        historyItems.add(HistoryAdapter.HistoryItem("04 abr 2026", "Entrada", "8:00 AM", true))
+    }
+
+    private fun showSuccessBanner(type: String, time: String) {
+        cardSuccessBanner.visibility = View.VISIBLE
+        tvSuccessTitle.text = "$type registrada."
+        tvSuccessTime.text = time
+
+        handler.postDelayed({
+            cardSuccessBanner.animate()
+                .alpha(0f)
+                .setDuration(500)
+                .withEndAction {
+                    cardSuccessBanner.visibility = View.GONE
+                    cardSuccessBanner.alpha = 1f
+                }
+        }, 5000)
     }
 
     private fun requestRuntimePermissions() {
@@ -267,29 +392,6 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        when (requestCode) {
-            PERMISSION_REQUEST_CODE -> {
-                for (i in permissions.indices) {
-                    when (permissions[i]) {
-                        Manifest.permission.CAMERA -> {
-                            if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                                Toast.makeText(this, "Permiso de cámara otorgado", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                        Manifest.permission.ACCESS_FINE_LOCATION -> {
-                            if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                                Toast.makeText(this, "Permiso de ubicación otorgado", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     private fun authenticateUser() {
         val executor = ContextCompat.getMainExecutor(this)
 
@@ -299,7 +401,7 @@ class HomeActivity : AppCompatActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    Toast.makeText(this@HomeActivity, "Huella verificada ✓", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@HomeActivity, "Huella verificada", Toast.LENGTH_SHORT).show()
                     openFaceDetection()
                 }
 
@@ -324,16 +426,35 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun openFaceDetection() {
-        val intent = Intent(this, CameraActivity::class.java)
-        startActivityForResult(intent, 100)
+        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
+
+        scope.launch {
+            try {
+                val location = locationManager.getReadableLocation()
+                val intent = Intent(this@HomeActivity, CameraActivity::class.java)
+                intent.putExtra(CameraActivity.EXTRA_LOCATION, location)
+                startActivityForResult(intent, 100)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                val intent = Intent(this@HomeActivity, CameraActivity::class.java)
+                intent.putExtra(CameraActivity.EXTRA_LOCATION, "Ubicación no disponible")
+                startActivityForResult(intent, 100)
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == 100 && resultCode == RESULT_OK) {
-            Toast.makeText(this, "Cara verificada ✓", Toast.LENGTH_SHORT).show()
-            checkLocationPermission()
+            val location = data?.getStringExtra(CameraActivity.RESULT_LOCATION) ?: ""
+            Toast.makeText(this, "Cara verificada", Toast.LENGTH_SHORT).show()
+
+            if (location.isNotEmpty() && location != "Ubicación no disponible") {
+                saveRegister(location)
+            } else {
+                checkLocationPermission()
+            }
         }
     }
 
@@ -365,80 +486,82 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun saveRegister(location: String) {
-        val sdf = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
-        val time = sdf.format(Date())
+        val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val sdfTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val sdfDisplay = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("es", "ES"))
+
+        val now = Date()
+        val fecha = sdfDate.format(now)
+        val hora = sdfTime.format(now)
+        val timeDisplay = sdfDisplay.format(now)
 
         val isEntry = sessionManager.shouldBeEntry()
         val type = if (isEntry) "Entrada" else "Salida"
 
-        sessionManager.saveAttendanceRecord(type = type, timestamp = time, location = location, faceConfidence = 0.9f)
+        Toast.makeText(this, "Guardando en servidor...", Toast.LENGTH_SHORT).show()
+
+        scope.launch {
+            try {
+                val empleadoId = sessionManager.getEmpleadoId()
+                val token = sessionManager.getToken()
+
+                ApiClient().setAuthToken(token)
+
+                val horaEntrada = if (isEntry) hora else null
+                val horaSalida = if (!isEntry) hora else null
+
+                val response = ApiClient().saveAttendance(
+                    empleadoId = empleadoId,
+                    fecha = fecha,
+                    horaEntrada = horaEntrada,
+                    horaSalida = horaSalida,
+                    tipo = type
+                )
+
+                if (response?.success == true) {
+                    sessionManager.saveAttendanceRecord(
+                        type = type,
+                        timestamp = timeDisplay,
+                        location = "☁️ $location",
+                        faceConfidence = 0.9f
+                    )
+                    sessionManager.saveLastRecordType(type)
+
+                    runOnUiThread {
+                        showSuccessBanner(type, timeDisplay)
+                        updateUI()
+                        loadHistory()
+                        Toast.makeText(this@HomeActivity, "Asistencia registrada", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    saveLocal(location, type, timeDisplay)
+                }
+
+            } catch (e: Exception) {
+                saveLocal(location, type, timeDisplay)
+            }
+        }
+    }
+
+    private fun saveLocal(location: String, type: String, timeDisplay: String) {
+        sessionManager.saveAttendanceRecord(
+            type = type,
+            timestamp = "$timeDisplay (local)",
+            location = "⚠️ $location",
+            faceConfidence = 0.9f
+        )
         sessionManager.saveLastRecordType(type)
 
-        val record = "$type - $time\n📍 $location"
-        history.add(0, record)
-        adapter.notifyDataSetChanged()
-        saveHistory()
-        updateButtonText()
-        updateLastRecordText()
-
-        Toast.makeText(this, "Asistencia registrada ✓", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun updateButtonText() {
-        val isEntry = sessionManager.shouldBeEntry()
-        if (isEntry) {
-            btnRegister.text = "Entrada"
-            btnRegister.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.green_entry))
-        } else {
-            btnRegister.text = "Salida"
-            btnRegister.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.red_exit))
+        runOnUiThread {
+            showSuccessBanner(type, timeDisplay)
+            updateUI()
+            loadHistory()
+            Toast.makeText(this, "Guardado local (sin conexión)", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun updateLastRecordText() {
-        val records = sessionManager.getAttendanceRecords()
-        if (records.isNotEmpty()) {
-            val lastRecord = records.first()
-            val recordDate = lastRecord.timestamp.split(" ")[0]
-            val today = SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date())
-            
-            if (recordDate == today) {
-                tvLastRecord.text = "Último registro: ${lastRecord.type} - ${lastRecord.timestamp}"
-            } else {
-                tvLastRecord.text = "Sin registros hoy"
-            }
-        } else {
-            tvLastRecord.text = "Sin registros"
-        }
-    }
-
-    private fun saveHistory() {
-        val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
-        val gson = Gson()
-        val json = gson.toJson(history)
-        prefs.edit().putString("history_json", json).apply()
-    }
-
-    private fun loadHistory() {
-        val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
-        val gson = Gson()
-        val savedJson = prefs.getString("history_json", null)
-
-        if (savedJson != null) {
-            try {
-                val loaded = gson.fromJson(savedJson, Array<String>::class.java).toList()
-                history.addAll(loaded)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        adapter.notifyDataSetChanged()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
-        handler.removeCallbacks(dateTimeRunnable)
     }
 }

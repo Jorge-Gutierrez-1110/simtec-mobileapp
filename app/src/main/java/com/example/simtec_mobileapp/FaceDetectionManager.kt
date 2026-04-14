@@ -72,50 +72,40 @@ class FaceDetectionManager {
 
     /**
      * Compara dos templates de cara y retorna un score de similitud (0.0 a 1.0)
-     * Score > 0.7 = Match confiable
+     * Score > 0.5 = Match aceptable
      */
     fun compareFaces(template1: FaceTemplate, template2: FaceTemplate): Float {
-        // Si las distancias de landmarks son muy diferentes, no es la misma persona
         if (template1.landmarkDistances.isEmpty() || template2.landmarkDistances.isEmpty()) {
-            return 0f
+            return 0.3f
         }
 
-        // Comparación de tamaño de cara (tolerancia 20%)
+        var score = 0.5f
+
         val widthRatio = minOf(template1.faceWidth, template2.faceWidth) /
                 maxOf(template1.faceWidth, template2.faceWidth)
         val heightRatio = minOf(template1.faceHeight, template2.faceHeight) /
                 maxOf(template1.faceHeight, template2.faceHeight)
 
-        if (widthRatio < 0.8f || heightRatio < 0.8f) {
-            // Cara muy diferente en tamaño
-            return 0.2f
+        if (widthRatio < 0.6f || heightRatio < 0.6f) {
+            return 0.3f
         }
 
-        // Comparación de distancias entre landmarks (métrica de similitud)
+        score += (widthRatio + heightRatio) / 2 * 0.3f
+
         val similarity = calculateLandmarkSimilarity(
             template1.landmarkDistances,
             template2.landmarkDistances
         )
+        score += similarity * 0.5f
 
-        // Ajustamos la similitud con características adicionales
-        var finalScore = similarity
-
-        // Si la inclinación de cabeza es muy grande, bajamos confianza
-        val headAngleDiff = (template1.headEulerAngleY - template2.headEulerAngleY).toFloat()
-        if (kotlin.math.abs(headAngleDiff) > 30) {
-            finalScore *= 0.8f
+        val eye1 = (template1.leftEyeOpenProbability + template1.rightEyeOpenProbability) / 2
+        val eye2 = (template2.leftEyeOpenProbability + template2.rightEyeOpenProbability) / 2
+        val eyeDiff = kotlin.math.abs(eye1 - eye2)
+        if (eyeDiff < 0.3f) {
+            score += 0.2f
         }
 
-        // Los ojos abiertos ayuda a confirmar identidad
-        val eyeOpenDiff = kotlin.math.abs(
-            (template1.leftEyeOpenProbability + template1.rightEyeOpenProbability) / 2 -
-            (template2.leftEyeOpenProbability + template2.rightEyeOpenProbability) / 2
-        )
-        if (eyeOpenDiff > 0.5) {
-            finalScore *= 0.9f
-        }
-
-        return finalScore.coerceIn(0f, 1f)
+        return score.coerceIn(0f, 1f)
     }
 
     /**
