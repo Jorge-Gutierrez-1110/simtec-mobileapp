@@ -337,49 +337,85 @@ class HomeActivity : AppCompatActivity() {
 
                 Log.d("HomeActivity", "📊 Cliente actual del empleado: $nuevoClienteId vs guardado: $savedClienteId")
 
-                if (nuevoClienteId != savedClienteId && nuevoClienteId > 0) {
-                    Log.d("HomeActivity", "🔄 Empresa cambiada - actualizando geocerca")
+                val hayCambioCliente = nuevoClienteId != savedClienteId && nuevoClienteId > 0
 
-                    val empresa = apiClient.getCatalogoById("clientes", nuevoClienteId)
-                    if (empresa != null) {
-                        val geocercaActiva = when (val v = empresa["geocerca_activa"]) {
-                            is Number -> v.toInt()
-                            is String -> v.toIntOrNull() ?: 0
-                            else -> 0
-                        }
-                        val geocercaLat = when (val v = empresa["geocerca_latitud"]) {
-                            is Number -> v.toDouble()
-                            is String -> v.toDoubleOrNull()
-                            else -> null
-                        }
-                        val geocercaLng = when (val v = empresa["geocerca_longitud"]) {
-                            is Number -> v.toDouble()
-                            is String -> v.toDoubleOrNull()
-                            else -> null
-                        }
-                        val geocercaRadio = when (val v = empresa["geocerca_radio_metros"]) {
-                            is Number -> v.toInt()
-                            is String -> v.toIntOrNull() ?: 1000
-                            else -> 1000
-                        }
+                if (hayCambioCliente) {
+                    Log.d("HomeActivity", "🔄 Cliente diferente - actualizando geocerca")
+                }
 
-                        sessionManager.saveClienteId(nuevoClienteId)
+                val empresa = apiClient.getCatalogoById("clientes", if (nuevoClienteId > 0) nuevoClienteId else savedClienteId)
+                if (empresa != null) {
+                    val geocercaActiva = when (val v = empresa["geocerca_activa"]) {
+                        is Number -> v.toInt()
+                        is String -> v.toIntOrNull() ?: 0
+                        else -> 0
+                    }
+                    val geocercaLat = when (val v = empresa["geocerca_latitud"]) {
+                        is Number -> v.toDouble()
+                        is String -> v.toDoubleOrNull()
+                        else -> null
+                    }
+                    val geocercaLng = when (val v = empresa["geocerca_longitud"]) {
+                        is Number -> v.toDouble()
+                        is String -> v.toDoubleOrNull()
+                        else -> null
+                    }
+                    val geocercaRadio = when (val v = empresa["geocerca_radio_metros"]) {
+                        is Number -> v.toInt()
+                        is String -> v.toIntOrNull() ?: 1000
+                        else -> 1000
+                    }
+
+                    val hayCambioGeocerca = hayCambioGeocerca(
+                        geocercaActiva,
+                        geocercaLat,
+                        geocercaLng,
+                        geocercaRadio
+                    )
+
+                    if (hayCambioCliente || hayCambioGeocerca) {
+                        Log.d("HomeActivity", "🔄 Actualizando geocerca - cambioCliente=$hayCambioCliente, cambioGeocerca=$hayCambioGeocerca")
+
+                        if (nuevoClienteId > 0) {
+                            sessionManager.saveClienteId(nuevoClienteId)
+                        }
 
                         if (geocercaActiva == 1 && geocercaLat != null && geocercaLng != null) {
                             sessionManager.saveGeocerca(geocercaLat, geocercaLng, geocercaRadio, true)
                             Log.d("HomeActivity", "✅ Geocerca actualizada: lat=$geocercaLat, lng=$geocercaLng, radio=$geocercaRadio")
                         } else {
                             sessionManager.saveGeocerca(0.0, 0.0, 1000, false)
-                            Log.d("HomeActivity", "⚠️ Nueva empresa sin geocerca")
+                            Log.d("HomeActivity", "⚠️ Empresa sin geocerca configurada")
                         }
+                    } else {
+                        Log.d("HomeActivity", "✅ Geocerca sin cambios")
                     }
                 } else {
-                    Log.d("HomeActivity", "✅ Empresa sin cambios")
+                    Log.w("HomeActivity", "⚠️ No se encontró empresa con ID $savedClienteId")
                 }
             } catch (e: Exception) {
                 Log.e("HomeActivity", "Error verificando empresa: ${e.message}")
             }
         }
+    }
+
+    private fun hayCambioGeocerca(
+        geocercaActiva: Int,
+        geocercaLat: Double?,
+        geocercaLng: Double?,
+        geocercaRadio: Int
+    ): Boolean {
+        val activaActual = sessionManager.isGeocercaActiva()
+        val latActual = sessionManager.getGeocercaLatitud()
+        val lngActual = sessionManager.getGeocercaLongitud()
+        val radioActual = sessionManager.getGeocercaRadioMetros()
+
+        val cambioActiva = geocercaActiva == 1 != activaActual
+        val cambioLat = geocercaLat != null && geocercaLat != latActual
+        val cambioLng = geocercaLng != null && geocercaLng != lngActual
+        val cambioRadio = geocercaRadio != radioActual
+
+        return cambioActiva || cambioLat || cambioLng || cambioRadio
     }
 
     private fun updateUI() {
@@ -648,30 +684,6 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun openFaceDetection() {
-        // Verificar que sigue dentro del rango solo si geocerca está activa
-        if (sessionManager.isGeocercaActiva() &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-
-            try {
-                val location = androidLocationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
-                if (location != null) {
-                    val distance = calculateDistance(
-                        location.latitude, location.longitude,
-                        sessionManager.getGeocercaLatitud(), sessionManager.getGeocercaLongitud()
-                    )
-
-                    if (distance > sessionManager.getGeocercaRadioMetros().toDouble()) {
-                        Toast.makeText(this, "Te saliste del área de registro. Abre el mapa para acercarte.", Toast.LENGTH_LONG).show()
-                        checkAndOpenMap(location)
-                        return
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("HomeActivity", "Error verificando ubicación: ${e.message}")
-            }
-        }
-
         Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
 
         scope.launch {

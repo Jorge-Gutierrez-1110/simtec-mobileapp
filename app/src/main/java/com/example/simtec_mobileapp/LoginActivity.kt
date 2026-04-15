@@ -234,7 +234,6 @@ class LoginActivity : AppCompatActivity() {
 
                 if (sessionManager.isLogged() || savedEmail.isNotEmpty()) {
                     etEmail.setText(savedEmail)
-                    etEmail.setEnabled(false)
                     fingerprintCard.visibility = View.VISIBLE
                     dividerSection.visibility = View.VISIBLE
 
@@ -403,7 +402,6 @@ class LoginActivity : AppCompatActivity() {
         val savedEmail = sessionManager.getSavedEmail()
         if (savedEmail.isNotEmpty()) {
             etEmail.setText(savedEmail)
-            etEmail.setEnabled(false)
             cbRememberPassword.isChecked = true
             etPassword.requestFocus()
         }
