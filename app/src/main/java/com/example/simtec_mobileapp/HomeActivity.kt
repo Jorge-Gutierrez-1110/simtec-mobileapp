@@ -3,6 +3,7 @@ package com.example.simtec_mobileapp
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,6 +28,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
 import com.example.simtec_mobileapp.ApiClient
+import com.example.simtec_mobileapp.chat.ChatActivity
+import com.example.simtec_mobileapp.chat.ChatNotificationHelper
+import com.example.simtec_mobileapp.chat.data.ChatRetrofitClient
+import com.example.simtec_mobileapp.chat.data.ChatSocketManager
 import com.example.simtec_mobileapp.showLoading
 import com.example.simtec_mobileapp.hideLoading
 import kotlinx.coroutines.*
@@ -92,6 +97,7 @@ class HomeActivity : AppCompatActivity() {
         updateUI()
         applyRolePermissions()
         requestRuntimePermissions()
+        inicializarChatSocket()
     }
 
     private fun setupDrawer() {
@@ -131,6 +137,11 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_register -> {
                     drawerLayout.closeDrawer(GravityCompat.START)
                     authenticateUser()
+                    true
+                }
+                R.id.nav_chat -> {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    startActivity(Intent(this, ChatActivity::class.java))
                     true
                 }
                 R.id.nav_nomina -> {
@@ -208,7 +219,49 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    // --- Chat: Conectar socket al iniciar la app ---
+    private fun inicializarChatSocket() {
+        Log.d("ChatSocket", "=== inicializarChatSocket() desde HomeActivity ===")
+
+        // Inicializar cliente HTTP y notificaciones
+        ChatRetrofitClient.init(this)
+        ChatNotificationHelper.init(this)
+
+        Log.d("ChatSocket", "Token disponible: ${ChatRetrofitClient.getToken() != null}")
+        Log.d("ChatSocket", "UserId: ${ChatRetrofitClient.getUserId()}, RolId: ${ChatRetrofitClient.getRolId()}")
+
+        // Conectar Socket.IO para recibir mensajes en tiempo real
+        // (aunque el usuario no este en ChatActivity)
+        if (!ChatSocketManager.isConnected) {
+            ChatSocketManager.connect("https://api.simtec-test.com")
+
+            // Feedback visual de conexion (solo para debug)
+            ChatSocketManager.onConectado {
+                runOnUiThread {
+                    Log.d("ChatSocket", "✅ Socket conectado desde HomeActivity")
+                    Toast.makeText(this, "Chat conectado ✅", Toast.LENGTH_SHORT).show()
+                }
+            }
+            ChatSocketManager.onDesconectado {
+                Log.w("ChatSocket", "❌ Socket desconectado desde HomeActivity")
+            }
+        } else {
+            Log.d("ChatSocket", "Socket ya estaba conectado")
+        }
+
+        // TEST: Disparar notificacion de prueba 3 segundos despues del inicio
+        // para verificar que el pipeline de notificaciones funciona.
+        // >>> ELIMINAR ESTE BLOQUE una vez confirmado que funciona <<<
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            Log.d("ChatSocket", "🧪 Enviando notificacion de prueba...")
+            ChatNotificationHelper.testNotificacion()
+        }, 3000)
+    }
+
     private fun logout() {
+        // Desconectar socket del chat al cerrar sesion
+        ChatSocketManager.disconnect()
+
         val prefs = getSharedPreferences("attendance", MODE_PRIVATE)
         prefs.edit().clear().apply()
 
@@ -460,6 +513,14 @@ class HomeActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        // Permiso de notificaciones (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
 
         if (permissionsToRequest.isNotEmpty()) {

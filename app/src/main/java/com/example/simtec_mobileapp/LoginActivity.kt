@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -17,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.example.simtec_mobileapp.showLoading
 import com.example.simtec_mobileapp.hideLoading
 import kotlinx.coroutines.*
@@ -32,6 +34,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var fingerprintCard: CardView
     private lateinit var tvFingerprintTitle: TextView
     private lateinit var tvFingerprintSubtitle: TextView
+    private lateinit var dividerSection: LinearLayout
 
     private lateinit var sessionManager: SessionManager
     private lateinit var executor: Executor
@@ -45,6 +48,11 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Status bar transparente para que el gradient se extienda
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+
         setContentView(R.layout.activity_login)
 
         sessionManager = SessionManager(this)
@@ -59,6 +67,7 @@ class LoginActivity : AppCompatActivity() {
         tvFingerprintSubtitle = findViewById(R.id.tvFingerprintSubtitle)
         cbRememberPassword = findViewById(R.id.cbRememberPassword)
         tvForgotPassword = findViewById(R.id.tvForgotPassword)
+        dividerSection = findViewById(R.id.dividerSection)
 
         checkBiometricSupport()
         loadSavedCredentials()
@@ -74,12 +83,12 @@ class LoginActivity : AppCompatActivity() {
             val password = etPassword.text.toString().trim()
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Por favor completa email y contraseña", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Por favor completa email y contrasena", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                Toast.makeText(this, "Por favor ingresa un email válido", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Por favor ingresa un email valido", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -97,6 +106,8 @@ class LoginActivity : AppCompatActivity() {
 
     private fun performLogin(email: String, password: String) {
         btnLogin.isEnabled = false
+        btnLogin.text = ""
+        btnLogin.background = ContextCompat.getDrawable(this, R.drawable.bg_login_button_disabled)
         progressBar.visibility = View.VISIBLE
         etEmail.isEnabled = false
         etPassword.isEnabled = false
@@ -145,23 +156,26 @@ class LoginActivity : AppCompatActivity() {
                     
                     Toast.makeText(this@LoginActivity, errorMessage, Toast.LENGTH_LONG).show()
 
-                    btnLogin.isEnabled = true
-                    progressBar.visibility = View.GONE
-                    etEmail.isEnabled = true
-                    etPassword.isEnabled = true
+                    resetLoginUI()
                 }
 
             } catch (e: Exception) {
                 Log.e("LoginActivity", "❌ EXCEPCIÓN: ${e.message}", e)
-                Toast.makeText(this@LoginActivity, "Error de conexión: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@LoginActivity, "Error de conexion: ${e.message}", Toast.LENGTH_LONG).show()
                 e.printStackTrace()
 
-                btnLogin.isEnabled = true
-                progressBar.visibility = View.GONE
-                etEmail.isEnabled = true
-                etPassword.isEnabled = true
+                resetLoginUI()
             }
         }
+    }
+
+    private fun resetLoginUI() {
+        btnLogin.isEnabled = true
+        btnLogin.text = "Ingresar"
+        btnLogin.background = ContextCompat.getDrawable(this, R.drawable.bg_login_button)
+        progressBar.visibility = View.GONE
+        etEmail.isEnabled = true
+        etPassword.isEnabled = true
     }
 
     private fun performFingerprintLogin(email: String, password: String) {
@@ -217,14 +231,15 @@ class LoginActivity : AppCompatActivity() {
         when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
             BiometricManager.BIOMETRIC_SUCCESS -> {
                 val savedEmail = sessionManager.getSavedEmail()
-                
+
                 if (sessionManager.isLogged() || savedEmail.isNotEmpty()) {
                     etEmail.setText(savedEmail)
                     etEmail.setEnabled(false)
                     fingerprintCard.visibility = View.VISIBLE
-                    
+                    dividerSection.visibility = View.VISIBLE
+
                     if (sessionManager.isLogged()) {
-                        tvFingerprintTitle.text = "Continuar sesión"
+                        tvFingerprintTitle.text = "Continuar sesion"
                         tvFingerprintSubtitle.text = "Toca para entrar directamente"
                     } else {
                         tvFingerprintTitle.text = getString(R.string.fingerprint_title)
@@ -232,20 +247,24 @@ class LoginActivity : AppCompatActivity() {
                     }
                 } else {
                     fingerprintCard.visibility = View.GONE
+                    dividerSection.visibility = View.GONE
                 }
             }
 
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
                 fingerprintCard.visibility = View.GONE
+                dividerSection.visibility = View.GONE
             }
 
             BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
                 Toast.makeText(this, "No hay huellas registradas", Toast.LENGTH_LONG).show()
                 fingerprintCard.visibility = View.GONE
+                dividerSection.visibility = View.GONE
             }
 
             else -> {
                 fingerprintCard.visibility = View.GONE
+                dividerSection.visibility = View.GONE
             }
         }
     }

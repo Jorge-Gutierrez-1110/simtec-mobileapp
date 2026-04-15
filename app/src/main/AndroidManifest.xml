@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!-- Hardware de cámara -->
     <uses-feature
@@ -66,6 +67,10 @@
 
         <activity
             android:name=".MapActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".chat.ChatActivity"
             android:exported="false"/>
 
     </application>

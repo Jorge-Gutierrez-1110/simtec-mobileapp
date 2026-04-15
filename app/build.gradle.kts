@@ -76,4 +76,20 @@ dependencies {
     implementation("de.hdodenhof:circleimageview:3.1.0")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
 
+    // === Chat: Retrofit (HTTP client para chat API) ===
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // === Chat: Socket.IO (mensajes en tiempo real) ===
+    implementation("io.socket:socket.io-client:2.1.1") {
+        exclude(group = "org.json", module = "json")
+    }
+
+    // === Chat: ViewModel + Compose integration ===
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+
+    // === Chat: Material Icons (Send, ArrowBack, Search, Chat) ===
+    implementation("androidx.compose.material:material-icons-extended")
 }

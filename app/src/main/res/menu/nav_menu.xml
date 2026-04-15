@@ -14,6 +14,11 @@
             android:icon="@android:drawable/ic_menu_camera"
             android:title="Registrar Asistencia"/>
 
+        <item
+            android:id="@+id/nav_chat"
+            android:icon="@android:drawable/ic_dialog_email"
+            android:title="Chat Soporte"/>
+
     </group>
 
     <!-- MÓDULOS ADMIN -->
