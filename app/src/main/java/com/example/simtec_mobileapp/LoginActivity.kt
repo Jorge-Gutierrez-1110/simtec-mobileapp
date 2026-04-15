@@ -319,10 +319,37 @@ class LoginActivity : AppCompatActivity() {
                         val empresa = apiClient.getCatalogoById("clientes", clienteId)
 
                         if (empresa != null) {
-                            val geocercaActiva = empresa["geocerca_activa"]?.toString()?.toIntOrNull() ?: 0
-                            val geocercaLat = empresa["geocerca_latitud"]?.toString()?.toDoubleOrNull()
-                            val geocercaLng = empresa["geocerca_longitud"]?.toString()?.toDoubleOrNull()
-                            val geocercaRadio = empresa["geocerca_radio_metros"]?.toString()?.toIntOrNull() ?: 1000
+                            val rawActiva = empresa["geocerca_activa"]
+                            val rawLat = empresa["geocerca_latitud"]
+                            val rawLng = empresa["geocerca_longitud"]
+                            val rawRadio = empresa["geocerca_radio_metros"]
+
+                            Log.d("LoginActivity", "📊 RAW: activa=$rawActiva (${rawActiva?.let { it::class.simpleName }}), lat=$rawLat (${rawLat?.let { it::class.simpleName }}), lng=$rawLng (${rawLng?.let { it::class.simpleName }}), radio=$rawRadio (${rawRadio?.let { it::class.simpleName }})")
+
+                            val geocercaActiva = when (val v = empresa["geocerca_activa"]) {
+                                is Number -> v.toInt()
+                                is String -> v.toIntOrNull() ?: 0
+                                else -> 0
+                            }
+                            val geocercaLat = when (val v = empresa["geocerca_latitud"]) {
+                                is Number -> v.toDouble()
+                                is String -> v.toDoubleOrNull()
+                                else -> null
+                            }
+                            val geocercaLng = when (val v = empresa["geocerca_longitud"]) {
+                                is Number -> v.toDouble()
+                                is String -> v.toDoubleOrNull()
+                                else -> null
+                            }
+                            val geocercaRadio = when (val v = empresa["geocerca_radio_metros"]) {
+                                is Number -> v.toInt()
+                                is String -> v.toIntOrNull() ?: 1000
+                                else -> 1000
+                            }
+
+                            Log.d("LoginActivity", "📊 PARSED: activa=$geocercaActiva, lat=$geocercaLat, lng=$geocercaLng, radio=$geocercaRadio")
+
+                            sessionManager.saveClienteId(clienteId!!)
 
                             if (geocercaActiva == 1 && geocercaLat != null && geocercaLng != null) {
                                 sessionManager.saveGeocerca(
@@ -332,12 +359,14 @@ class LoginActivity : AppCompatActivity() {
                                     activa = true
                                 )
                                 Log.d("LoginActivity", "✅ Geocerca guardada: lat=$geocercaLat, lng=$geocercaLng, radio=$geocercaRadio")
-                            } else {
-                                sessionManager.saveGeocerca(latitud = 0.0, longitud = 0.0, radioMetros = 1000, activa = false)
-                                Log.d("LoginActivity", "⚠️ Geocerca no configurada para empresa ID $clienteId")
-                            }
+} else {
+                        sessionManager.saveClienteId(clienteId!!)
+                        sessionManager.saveGeocerca(latitud = 0.0, longitud = 0.0, radioMetros = 1000, activa = false)
+                        Log.d("LoginActivity", "⚠️ Geocerca no configurada para empresa ID $clienteId")
+                    }
                         }
                     } else {
+                        sessionManager.saveClienteId(0)
                         sessionManager.saveGeocerca(latitud = 0.0, longitud = 0.0, radioMetros = 1000, activa = false)
                         Log.d("LoginActivity", "⚠️ Sin empresa asignada")
                     }

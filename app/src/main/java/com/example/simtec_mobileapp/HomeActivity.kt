@@ -26,6 +26,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
+import com.example.simtec_mobileapp.ApiClient
 import com.example.simtec_mobileapp.showLoading
 import com.example.simtec_mobileapp.hideLoading
 import kotlinx.coroutines.*
@@ -86,6 +87,7 @@ class HomeActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         loadUserData()
+        verificarEmpresaActual()
         loadHistory()
         updateUI()
         applyRolePermissions()
@@ -256,6 +258,70 @@ class HomeActivity : AppCompatActivity() {
         navHeaderName.text = user
         navHeaderRol.text = rol
         tvWelcome.text = "Hola $user, registra tu asistencia con un toque"
+    }
+
+    private fun verificarEmpresaActual() {
+        val savedClienteId = sessionManager.getClienteId()
+        Log.d("HomeActivity", "📊 Cliente guardado: $savedClienteId")
+
+        if (savedClienteId == 0) {
+            Log.d("HomeActivity", "⚠️ Sin empresa guardada previamente")
+            return
+        }
+
+        scope.launch {
+            try {
+                val apiClient = ApiClient()
+                apiClient.setAuthToken(sessionManager.getToken())
+
+                val empleado = apiClient.getEmpleadoCompleto(sessionManager.getEmpleadoId())
+                val nuevoClienteId = empleado?.cliente_id ?: 0
+
+                Log.d("HomeActivity", "📊 Cliente actual del empleado: $nuevoClienteId vs guardado: $savedClienteId")
+
+                if (nuevoClienteId != savedClienteId && nuevoClienteId > 0) {
+                    Log.d("HomeActivity", "🔄 Empresa cambiada - actualizando geocerca")
+
+                    val empresa = apiClient.getCatalogoById("clientes", nuevoClienteId)
+                    if (empresa != null) {
+                        val geocercaActiva = when (val v = empresa["geocerca_activa"]) {
+                            is Number -> v.toInt()
+                            is String -> v.toIntOrNull() ?: 0
+                            else -> 0
+                        }
+                        val geocercaLat = when (val v = empresa["geocerca_latitud"]) {
+                            is Number -> v.toDouble()
+                            is String -> v.toDoubleOrNull()
+                            else -> null
+                        }
+                        val geocercaLng = when (val v = empresa["geocerca_longitud"]) {
+                            is Number -> v.toDouble()
+                            is String -> v.toDoubleOrNull()
+                            else -> null
+                        }
+                        val geocercaRadio = when (val v = empresa["geocerca_radio_metros"]) {
+                            is Number -> v.toInt()
+                            is String -> v.toIntOrNull() ?: 1000
+                            else -> 1000
+                        }
+
+                        sessionManager.saveClienteId(nuevoClienteId)
+
+                        if (geocercaActiva == 1 && geocercaLat != null && geocercaLng != null) {
+                            sessionManager.saveGeocerca(geocercaLat, geocercaLng, geocercaRadio, true)
+                            Log.d("HomeActivity", "✅ Geocerca actualizada: lat=$geocercaLat, lng=$geocercaLng, radio=$geocercaRadio")
+                        } else {
+                            sessionManager.saveGeocerca(0.0, 0.0, 1000, false)
+                            Log.d("HomeActivity", "⚠️ Nueva empresa sin geocerca")
+                        }
+                    }
+                } else {
+                    Log.d("HomeActivity", "✅ Empresa sin cambios")
+                }
+            } catch (e: Exception) {
+                Log.e("HomeActivity", "Error verificando empresa: ${e.message}")
+            }
+        }
     }
 
     private fun updateUI() {
@@ -516,9 +582,10 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun openFaceDetection() {
-        // Verificar que sigue dentro del rango antes de abrir cámara
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED) {
+        // Verificar que sigue dentro del rango solo si geocerca está activa
+        if (sessionManager.isGeocercaActiva() &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
 
             try {
                 val location = androidLocationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
@@ -529,7 +596,6 @@ class HomeActivity : AppCompatActivity() {
                     )
 
                     if (distance > sessionManager.getGeocercaRadioMetros().toDouble()) {
-                        // Salió del área mientras estaba en proceso
                         Toast.makeText(this, "Te saliste del área de registro. Abre el mapa para acercarte.", Toast.LENGTH_LONG).show()
                         checkAndOpenMap(location)
                         return
@@ -692,6 +758,11 @@ class HomeActivity : AppCompatActivity() {
             loadHistory()
             Toast.makeText(this, "Guardado local (sin conexión)", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        verificarEmpresaActual()
     }
 
     override fun onDestroy() {

@@ -305,6 +305,20 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Guarda el ID de la empresa/cliente actual
+     */
+    fun saveClienteId(id: Int) {
+        prefs.edit().putInt("cliente_id", id).apply()
+    }
+
+    /**
+     * Obtiene el ID de la empresa/cliente guardada
+     */
+    fun getClienteId(): Int {
+        return prefs.getInt("cliente_id", 0)
+    }
+
+    /**
      * Guarda los datos de geocerca de la empresa
      */
     fun saveGeocerca(latitud: Double, longitud: Double, radioMetros: Int, activa: Boolean) {
