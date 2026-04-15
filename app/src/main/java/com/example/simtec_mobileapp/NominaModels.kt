@@ -77,3 +77,37 @@ data class Desglose(
     val percepciones: List<Concepto> = emptyList(),
     val deducciones: List<Concepto> = emptyList()
 )
+
+// ============ MIS RECIBOS (Empleado) ============
+
+data class ReciboNomina(
+    val id: Int = 0,
+    val nomina_id: Int = 0,
+    val empleado_id: Int = 0,
+    val nombre_completo: String = "",
+    val rfc: String = "",
+    val curp: String = "",
+    val dias_pagados: Int = 0,
+    val salario_diario: Double = 0.0,
+    val sueldo_base: Double = 0.0,
+    val total_percepciones: Double = 0.0,
+    val total_deducciones: Double = 0.0,
+    val neto: Double = 0.0,
+    val percepciones_list: List<ConceptoMonto> = emptyList(),
+    val deducciones_list: List<ConceptoMonto> = emptyList(),
+    val fecha_cierre: String? = null,
+    val periodo_id: Int = 0,
+    val periodo_nombre: String = "",
+    val periodo_tipo: String = "",
+    val periodo_inicio: String = "",
+    val periodo_fin: String = ""
+)
+
+data class ConceptoMonto(
+    val id: Int = 0,
+    val concepto: String = "",
+    val nombre: String = "",
+    val monto: Double = 0.0,
+    val manual: Boolean = false,
+    val origen: String? = null
+)

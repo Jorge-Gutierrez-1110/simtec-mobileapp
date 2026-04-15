@@ -144,6 +144,11 @@ class HomeActivity : AppCompatActivity() {
                     startActivity(Intent(this, ChatActivity::class.java))
                     true
                 }
+                R.id.nav_mis_recibos -> {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    startActivity(Intent(this, MisRecibosActivity::class.java))
+                    true
+                }
                 R.id.nav_nomina -> {
                     drawerLayout.closeDrawer(GravityCompat.START)
                     startActivity(Intent(this, NominaProcesoActivity::class.java))

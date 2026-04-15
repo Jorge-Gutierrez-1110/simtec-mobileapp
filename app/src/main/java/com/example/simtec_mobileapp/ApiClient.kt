@@ -39,10 +39,18 @@ class ApiClient {
         .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
 
-    /**
-     * Realiza un login con email y password
-     * Retorna una respuesta parseada o null si hay error
-     */
+    // ============ HELPER: ejecuta request en IO y retorna (code, isSuccessful, body) ============
+
+    private data class HttpResult(val code: Int, val isSuccessful: Boolean, val body: String?)
+
+    private suspend fun executeRequest(request: Request): HttpResult = withContext(Dispatchers.IO) {
+        val response = httpClient.newCall(request).execute()
+        val body = response.body?.string()
+        HttpResult(response.code, response.isSuccessful, body)
+    }
+
+    // ============ LOGIN ============
+
     suspend fun login(email: String, password: String): LoginResponse? {
         return try {
             val payload = JsonObject().apply {
@@ -65,54 +73,47 @@ class ApiClient {
             Log.d("ApiClient", "ENVIANDO LOGIN")
             Log.d("ApiClient", "URL: ${request.url}")
             Log.d("ApiClient", "Email: $email")
-            Log.d("ApiClient", "Password: (oculto)")
             Log.d("ApiClient", "═══════════════════════════════════")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
             Log.d("ApiClient", "═══════════════════════════════════")
             Log.d("ApiClient", "RESPUESTA RECIBIDA")
-            Log.d("ApiClient", "Status Code: ${response.code}")
-            Log.d("ApiClient", "Is Successful: ${response.isSuccessful}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "Response Body: $responseBody")
+            Log.d("ApiClient", "Status Code: ${result.code}")
+            Log.d("ApiClient", "Is Successful: ${result.isSuccessful}")
+            Log.d("ApiClient", "Response Body: ${result.body}")
             Log.d("ApiClient", "═══════════════════════════════════")
 
-            if (responseBody != null) {
+            if (result.body != null) {
                 try {
-                    val loginResponse = gson.fromJson(responseBody, LoginResponse::class.java)
+                    val loginResponse = gson.fromJson(result.body, LoginResponse::class.java)
 
                     Log.d("ApiClient", "PARSEADO EXITOSAMENTE:")
                     Log.d("ApiClient", "  success: ${loginResponse.success}")
-                    Log.d("ApiClient", "  token: ${if (loginResponse.token != null) "✓ Presente" else "✗ Null"}")
-                    Log.d("ApiClient", "  user: ${if (loginResponse.user != null) "✓ ${loginResponse.user.email}" else "✗ Null"}")
+                    Log.d("ApiClient", "  token: ${if (loginResponse.token != null) "Presente" else "Null"}")
+                    Log.d("ApiClient", "  user: ${if (loginResponse.user != null) "${loginResponse.user.email}" else "Null"}")
                     Log.d("ApiClient", "  message: ${loginResponse.message}")
 
                     loginResponse
                 } catch (e: Exception) {
-                    Log.e("ApiClient", "❌ ERROR AL PARSEAR JSON: ${e.message}")
+                    Log.e("ApiClient", "ERROR AL PARSEAR JSON: ${e.message}")
                     e.printStackTrace()
                     null
                 }
             } else {
-                Log.e("ApiClient", "❌ Response body es null")
+                Log.e("ApiClient", "Response body es null")
                 null
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN EN LOGIN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION EN LOGIN: ${e.message}", e)
             e.printStackTrace()
             null
         }
     }
 
-    /**
-     * Guarda un registro de asistencia en el servidor
-     * Retorna AttendanceResponse o null si hay error
-     */
+    // ============ ASISTENCIA ============
+
     suspend fun saveAttendance(
         empleadoId: Int,
         fecha: String,
@@ -147,28 +148,22 @@ class ApiClient {
 
             val request = requestBuilder.build()
 
-            Log.d("ApiClient", "📤 GUARDANDO ASISTENCIA")
+            Log.d("ApiClient", "GUARDANDO ASISTENCIA")
             Log.d("ApiClient", "  URL: ${request.url}")
             Log.d("ApiClient", "  Empleado: $empleadoId, Tipo: $tipo, Fecha: $fecha")
-            Log.d("ApiClient", "  Ubicación: ${ubicacion?.take(50)}...")
-            Log.d("ApiClient", "  Foto: ${if (foto != null) "Presente (${foto.length} chars)" else "NULL"}")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            Log.d("ApiClient", "  Status: ${response.code}")
+            Log.d("ApiClient", "  Status: ${result.code}")
+            Log.d("ApiClient", "  Response: ${result.body}")
 
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (responseBody != null) {
+            if (result.body != null) {
                 try {
-                    val attendanceResponse = gson.fromJson(responseBody, AttendanceResponse::class.java)
+                    val attendanceResponse = gson.fromJson(result.body, AttendanceResponse::class.java)
                     Log.d("ApiClient", "  Success: ${attendanceResponse.success}")
                     attendanceResponse
                 } catch (e: Exception) {
-                    Log.e("ApiClient", "❌ ERROR PARSE: ${e.message}")
+                    Log.e("ApiClient", "ERROR PARSE: ${e.message}")
                     null
                 }
             } else {
@@ -176,14 +171,13 @@ class ApiClient {
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION: ${e.message}", e)
             null
         }
     }
 
-    /**
-     * Data class para la respuesta del login
-     */
+    // ============ DATA CLASSES ============
+
     data class LoginResponse(
         val success: Boolean = false,
         val token: String? = null,
@@ -191,9 +185,6 @@ class ApiClient {
         val message: String? = null
     )
 
-    /**
-     * Data class para los datos del usuario devueltos por el API
-     */
     data class UserData(
         val id: Int = 0,
         val nombre: String = "",
@@ -204,9 +195,6 @@ class ApiClient {
         val permisos: List<String> = emptyList()
     )
 
-    /**
-     * Data class para la respuesta de asistencia
-     */
     data class AttendanceResponse(
         val success: Boolean = false,
         val message: String? = null,
@@ -218,9 +206,8 @@ class ApiClient {
         val extras: Int = 0
     )
 
-    /**
-     * Obtiene el historial de asistencia del empleado desde el servidor
-     */
+    // ============ HISTORIAL ASISTENCIA ============
+
     suspend fun getAttendanceHistory(empleadoId: Int): List<AttendanceRecord>? {
         return try {
             val request = Request.Builder()
@@ -229,21 +216,17 @@ class ApiClient {
                 .addHeader("Content-Type", "application/json")
                 .build()
 
-            Log.d("ApiClient", "📤 OBTENIENDO HISTORIAL")
+            Log.d("ApiClient", "OBTENIENDO HISTORIAL")
             Log.d("ApiClient", "  URL: ${request.url}")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            Log.d("ApiClient", "  Status: ${response.code}")
+            Log.d("ApiClient", "  Status: ${result.code}")
+            Log.d("ApiClient", "  Response: ${result.body}")
 
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<AttendanceRecord>>() {}.type
-                val records: List<AttendanceRecord> = gson.fromJson(responseBody, type)
+            if (result.isSuccessful && result.body != null) {
+                val type = object : TypeToken<List<AttendanceRecord>>() {}.type
+                val records: List<AttendanceRecord> = gson.fromJson(result.body, type)
                 Log.d("ApiClient", "  Registros obtenidos: ${records.size}")
                 records
             } else {
@@ -251,7 +234,7 @@ class ApiClient {
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION: ${e.message}", e)
             null
         }
     }
@@ -266,11 +249,8 @@ class ApiClient {
         val comentarios: String? = null
     )
 
-    // ============ NÓMINA API ============
+    // ============ NOMINA API ============
 
-    /**
-     * Genera el pre-cálculo de nómina para un período
-     */
     suspend fun preCalculoNomina(periodoId: Int): NominaResponse? {
         return try {
             val payload = JsonObject().apply {
@@ -287,34 +267,27 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            Log.d("ApiClient", "📤 PRE-CÁLCULO NÓMINA")
+            Log.d("ApiClient", "PRE-CALCULO NOMINA")
             Log.d("ApiClient", "  URL: ${request.url}")
             Log.d("ApiClient", "  Periodo ID: $periodoId")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            Log.d("ApiClient", "  Status: ${response.code}")
+            Log.d("ApiClient", "  Status: ${result.code}")
+            Log.d("ApiClient", "  Response: ${result.body}")
 
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (responseBody != null) {
-                gson.fromJson(responseBody, NominaResponse::class.java)
+            if (result.body != null) {
+                gson.fromJson(result.body, NominaResponse::class.java)
             } else {
                 null
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION: ${e.message}", e)
             null
         }
     }
 
-    /**
-     * Cierra la nómina de un período
-     */
     suspend fun cerrarNomina(requestData: NominaCierreRequest): NominaResponse? {
         return try {
             val requestBody = gson.toJson(requestData)
@@ -327,33 +300,28 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            Log.d("ApiClient", "📤 CERRAR NÓMINA")
+            Log.d("ApiClient", "CERRAR NOMINA")
             Log.d("ApiClient", "  URL: ${request.url}")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            Log.d("ApiClient", "  Status: ${response.code}")
+            Log.d("ApiClient", "  Status: ${result.code}")
+            Log.d("ApiClient", "  Response: ${result.body}")
 
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (responseBody != null) {
-                gson.fromJson(responseBody, NominaResponse::class.java)
+            if (result.body != null) {
+                gson.fromJson(result.body, NominaResponse::class.java)
             } else {
                 null
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION: ${e.message}", e)
             null
         }
     }
 
-    /**
-     * Obtiene un registro de cualquier catálogo por ID
-     */
+    // ============ CATALOGOS ============
+
     suspend fun getCatalogoById(tabla: String, id: Int): Map<String, Any>? {
         return try {
             val request = Request.Builder()
@@ -363,30 +331,26 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            Log.d("ApiClient", "📤 OBTENIENDO CATALOGO: $tabla id=$id")
+            Log.d("ApiClient", "OBTENIENDO CATALOGO: $tabla id=$id")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
+            Log.d("ApiClient", "  Response: ${result.body}")
 
-            if (response.isSuccessful && responseBody != null) {
-                gson.fromJson(responseBody, Map::class.java) as? Map<String, Any>
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, Map::class.java) as? Map<String, Any>
             } else {
                 null
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION: ${e.message}", e)
             null
         }
     }
 
-    /**
-     * Obtiene los datos completos del empleado (perfil)
-     */
+    // ============ EMPLEADO PERFIL ============
+
     suspend fun getEmpleadoCompleto(empleadoId: Int): EmpleadoPerfil? {
         return try {
             val request = Request.Builder()
@@ -396,27 +360,23 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            Log.d("ApiClient", "📤 OBTENIENDO PERFIL EMPLEADO")
+            Log.d("ApiClient", "OBTENIENDO PERFIL EMPLEADO")
             Log.d("ApiClient", "  URL: ${request.url}")
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            Log.d("ApiClient", "  Status: ${response.code}")
+            Log.d("ApiClient", "  Status: ${result.code}")
+            Log.d("ApiClient", "  Response: ${result.body}")
 
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (response.isSuccessful && responseBody != null) {
-                val responseObj = gson.fromJson(responseBody, EmpleadoPerfilResponse::class.java)
+            if (result.isSuccessful && result.body != null) {
+                val responseObj = gson.fromJson(result.body, EmpleadoPerfilResponse::class.java)
                 responseObj.empleado
             } else {
                 null
             }
 
         } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
+            Log.e("ApiClient", "EXCEPCION: ${e.message}", e)
             null
         }
     }
@@ -465,12 +425,13 @@ class ApiClient {
         val cuenta_bancaria: String? = null,
         val clabe_interbancaria: String? = null,
         val usuario_email: String? = null,
-        // Datos de geocerca de la empresa
         val geocerca_activa: Int? = null,
         val geocerca_latitud: Double? = null,
         val geocerca_longitud: Double? = null,
         val geocerca_radio_metros: Int? = null
     )
+
+    // ============ GASTOS ============
 
     data class GastosCatalogosResponse(
         val categorias: List<CatGasto>? = null,
@@ -509,6 +470,7 @@ class ApiClient {
         val categoria_id: Int? = null,
         val solicitante_id: Int? = null,
         val beneficiario_id: Int? = null,
+        val aprobador_id: Int? = null,
         val concepto: String = "",
         val subtotal: Double = 0.0,
         val iva: Double = 0.0,
@@ -518,12 +480,15 @@ class ApiClient {
         val fecha_vencimiento: String? = null,
         val factura_url: String? = null,
         val estatus: String = "",
+        val motivo_rechazo: String? = null,
         val cliente_id: Int? = null,
         val created_at: String? = null,
+        val updated_at: String? = null,
         val proveedor: String? = null,
         val categoria: String? = null,
         val categoria_color: String? = null,
         val solicitante: String? = null,
+        val aprobador: String? = null,
         val cliente_nombre: String? = null,
         val fecha_pago: String? = null,
         val pago_url: String? = null
@@ -538,13 +503,10 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                gson.fromJson(body, GastosCatalogosResponse::class.java)
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, GastosCatalogosResponse::class.java)
             } else null
 
         } catch (e: Exception) {
@@ -562,14 +524,11 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                val type = object : com.google.gson.reflect.TypeToken<List<GastoRecord>>() {}.type
-                gson.fromJson(body, type)
+            if (result.isSuccessful && result.body != null) {
+                val type = object : TypeToken<List<GastoRecord>>() {}.type
+                gson.fromJson(result.body, type)
             } else null
 
         } catch (e: Exception) {
@@ -617,13 +576,10 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                gson.fromJson(body, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type)
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, object : TypeToken<Map<String, Any>>() {}.type)
             } else null
 
         } catch (e: Exception) {
@@ -631,6 +587,36 @@ class ApiClient {
             null
         }
     }
+
+    // ============ MIS RECIBOS (Empleado) ============
+
+    suspend fun getMisRecibos(empleadoId: Int): List<ReciboNomina>? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/mis-recibos/$empleadoId")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            Log.d("ApiClient", "OBTENIENDO MIS RECIBOS empleado=$empleadoId")
+
+            val result = executeRequest(request)
+
+            Log.d("ApiClient", "  Status: ${result.code}")
+
+            if (result.isSuccessful && result.body != null) {
+                val type = object : TypeToken<List<ReciboNomina>>() {}.type
+                gson.fromJson(result.body, type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error getMisRecibos: ${e.message}")
+            null
+        }
+    }
+
+    // ============ PERIODOS ============
 
     suspend fun getPeriodos(): List<Periodo>? {
         return try {
@@ -642,15 +628,12 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
+            if (result.isSuccessful && result.body != null) {
                 val type = object : TypeToken<List<Periodo>>() {}.type
                 @Suppress("UNCHECKED_CAST")
-                (gson.fromJson(body, type) as? List<Periodo>)
+                (gson.fromJson(result.body, type) as? List<Periodo>)
             } else null
 
         } catch (e: Exception) {
@@ -671,13 +654,10 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(httpRequest).execute()
-            }
+            val result = executeRequest(httpRequest)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                gson.fromJson(body, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type)
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, object : TypeToken<Map<String, Any>>() {}.type)
             } else null
 
         } catch (e: Exception) {
@@ -698,13 +678,10 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                gson.fromJson(body, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type)
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, object : TypeToken<Map<String, Any>>() {}.type)
             } else null
 
         } catch (e: Exception) {
@@ -722,14 +699,11 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
+            if (result.isSuccessful && result.body != null) {
                 val type = object : TypeToken<List<EmpleadoNomina>>() {}.type
-                gson.fromJson(body, type)
+                gson.fromJson(result.body, type)
             } else null
 
         } catch (e: Exception) {
@@ -738,7 +712,7 @@ class ApiClient {
         }
     }
 
-    // ============ SOLICITUDES DE NÓMINA ============
+    // ============ SOLICITUDES DE NOMINA ============
 
     data class NominaSolicitud(
         val id: Int = 0,
@@ -766,15 +740,12 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
+            if (result.isSuccessful && result.body != null) {
                 val type = object : TypeToken<List<EmpleadoNomina>>() {}.type
                 @Suppress("UNCHECKED_CAST")
-                gson.fromJson(body, type) as? List<EmpleadoNomina>
+                gson.fromJson(result.body, type) as? List<EmpleadoNomina>
             } else null
 
         } catch (e: Exception) {
@@ -792,15 +763,12 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
+            if (result.isSuccessful && result.body != null) {
                 val type = object : TypeToken<List<Concepto>>() {}.type
                 @Suppress("UNCHECKED_CAST")
-                gson.fromJson(body, type) as? List<Concepto>
+                gson.fromJson(result.body, type) as? List<Concepto>
             } else null
 
         } catch (e: Exception) {
@@ -818,15 +786,12 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
+            if (result.isSuccessful && result.body != null) {
                 val type = object : TypeToken<List<NominaSolicitud>>() {}.type
                 @Suppress("UNCHECKED_CAST")
-                gson.fromJson(body, type) as? List<NominaSolicitud>
+                gson.fromJson(result.body, type) as? List<NominaSolicitud>
             } else null
 
         } catch (e: Exception) {
@@ -850,13 +815,10 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                gson.fromJson(body, object : TypeToken<Map<String, Any>>() {}.type)
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, object : TypeToken<Map<String, Any>>() {}.type)
             } else null
 
         } catch (e: Exception) {
@@ -893,13 +855,10 @@ class ApiClient {
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
+            val result = executeRequest(request)
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                gson.fromJson(body, object : TypeToken<Map<String, Any>>() {}.type)
+            if (result.isSuccessful && result.body != null) {
+                gson.fromJson(result.body, object : TypeToken<Map<String, Any>>() {}.type)
             } else null
 
         } catch (e: Exception) {

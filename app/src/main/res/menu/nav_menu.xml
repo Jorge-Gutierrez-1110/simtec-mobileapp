@@ -19,6 +19,11 @@
             android:icon="@android:drawable/ic_dialog_email"
             android:title="Chat Soporte"/>
 
+        <item
+            android:id="@+id/nav_mis_recibos"
+            android:icon="@android:drawable/ic_menu_recent_history"
+            android:title="Mi Nomina"/>
+
     </group>
 
     <!-- MÓDULOS ADMIN -->

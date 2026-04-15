@@ -73,6 +73,14 @@
             android:name=".chat.ChatActivity"
             android:exported="false"/>
 
+        <activity
+            android:name=".MisRecibosActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".NominaProcesoActivity"
+            android:exported="false"/>
+
     </application>
 
 </manifest>

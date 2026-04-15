@@ -92,4 +92,7 @@ dependencies {
 
     // === Chat: Material Icons (Send, ArrowBack, Search, Chat) ===
     implementation("androidx.compose.material:material-icons-extended")
+
+    // === Gastos: SwipeRefreshLayout ===
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 }
