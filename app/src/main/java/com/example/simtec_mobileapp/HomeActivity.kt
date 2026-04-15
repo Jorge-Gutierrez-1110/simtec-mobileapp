@@ -254,13 +254,6 @@ class HomeActivity : AppCompatActivity() {
             Log.d("ChatSocket", "Socket ya estaba conectado")
         }
 
-        // TEST: Disparar notificacion de prueba 3 segundos despues del inicio
-        // para verificar que el pipeline de notificaciones funciona.
-        // >>> ELIMINAR ESTE BLOQUE una vez confirmado que funciona <<<
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            Log.d("ChatSocket", "🧪 Enviando notificacion de prueba...")
-            ChatNotificationHelper.testNotificacion()
-        }, 3000)
     }
 
     private fun logout() {
