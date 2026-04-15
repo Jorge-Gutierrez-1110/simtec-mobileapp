@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <!-- Hardware de cámara -->
     <uses-feature
@@ -24,6 +26,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Simtecmobileapp"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
         <activity
@@ -43,6 +46,26 @@
 
         <activity
             android:name=".CameraActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".NominaActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".GastosActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".SolicitudesActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".PerfilActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".MapActivity"
             android:exported="false"/>
 
     </application>

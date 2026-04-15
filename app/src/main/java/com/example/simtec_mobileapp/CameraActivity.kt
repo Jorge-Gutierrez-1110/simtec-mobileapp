@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -17,8 +18,16 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import android.graphics.BitmapFactory
+import android.util.Base64
 
 class CameraActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_LOCATION = "extra_location"
+        const val RESULT_LOCATION = "result_location"
+        const val RESULT_PHOTO = "result_photo"
+    }
 
     private lateinit var previewView: PreviewView
     private lateinit var imageCapture: ImageCapture
@@ -36,7 +45,10 @@ class CameraActivity : AppCompatActivity() {
 
     private var lastDetectedFace: FaceDetectionManager.FaceTemplate? = null
     private var confirmationCount = 0
+    private var currentLocation: String = ""
+    private var capturedPhotoBase64: String? = null
 
+    @OptIn(ExperimentalGetImage::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_camera)
@@ -45,6 +57,8 @@ class CameraActivity : AppCompatActivity() {
         tvFaceStatus = findViewById(R.id.tvFaceStatus)
         tvConfidence = findViewById(R.id.tvConfidence)
         btnConfirm = findViewById(R.id.btnConfirm)
+
+        currentLocation = intent.getStringExtra(EXTRA_LOCATION) ?: ""
 
         faceDetectionManager = FaceDetectionManager()
         sessionManager = SessionManager(this)
@@ -115,6 +129,7 @@ class CameraActivity : AppCompatActivity() {
     /**
      * Analiza cada frame para detectar caras
      */
+    @OptIn(ExperimentalGetImage::class)
     private fun detectFaceInFrame(imageProxy: ImageProxy) {
         if (isProcessing) {
             imageProxy.close()
@@ -201,12 +216,12 @@ class CameraActivity : AppCompatActivity() {
                 tvConfidence.text = "Confianza: $percentConfidence%"
 
                 when {
-                    confidence >= 0.75f -> {
+                    confidence >= 0.65f -> {
                         tvFaceStatus.text = "✓ Cara identificada correctamente"
                         tvFaceStatus.setTextColor(getColor(android.R.color.holo_green_light))
                         confirmationCount++
                     }
-                    confidence >= 0.6f -> {
+                    confidence >= 0.50f -> {
                         tvFaceStatus.text = "~ Cara similar, pero no es seguro"
                         tvFaceStatus.setTextColor(getColor(android.R.color.holo_orange_light))
                         confirmationCount = maxOf(0, confirmationCount - 1)
@@ -218,13 +233,13 @@ class CameraActivity : AppCompatActivity() {
                     }
                 }
 
-                // Si lleva 3 detecciones positivas, permitimos confirmar
-                if (confirmationCount >= 3) {
+                // Si lleva 4 detecciones positivas, permitimos confirmar
+                if (confirmationCount >= 4) {
                     btnConfirm.isEnabled = true
                     btnConfirm.text = "Confirmar (Listo)"
                 } else {
                     btnConfirm.isEnabled = false
-                    btnConfirm.text = "Confirmar (${confirmationCount}/3)"
+                    btnConfirm.text = "Confirmar (${confirmationCount}/4)"
                 }
             }
         }
@@ -234,8 +249,54 @@ class CameraActivity : AppCompatActivity() {
      * Confirma la identidad y retorna al HomeActivity
      */
     private fun confirmAndExit() {
-        setResult(Activity.RESULT_OK)
-        finish()
+        val imageCapture = this.imageCapture
+        if (imageCapture == null) {
+            // No hay cámara, salir sin foto
+            val returnIntent = intent
+            returnIntent.putExtra(RESULT_LOCATION, currentLocation)
+            setResult(Activity.RESULT_OK, returnIntent)
+            finish()
+            return
+        }
+
+        // Capturar foto SINCRÓNICAMENTE antes de salir
+        imageCapture.takePicture(
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    val buffer = image.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining())
+                    buffer.get(bytes)
+                    image.close()
+
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bitmap != null) {
+                        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 480, 640, true)
+                        val outputStream = java.io.ByteArrayOutputStream()
+                        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+                        val base64 = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+                        capturedPhotoBase64 = "data:image/jpeg;base64,$base64"
+                        Log.d("CameraActivity", "Foto capturada: ${capturedPhotoBase64?.length} caracteres")
+                    }
+
+                    // Ahora sí, retornar al HomeActivity
+                    val returnIntent = intent
+                    returnIntent.putExtra(RESULT_LOCATION, currentLocation)
+                    capturedPhotoBase64?.let { returnIntent.putExtra(RESULT_PHOTO, it) }
+                    setResult(Activity.RESULT_OK, returnIntent)
+                    finish()
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e("CameraActivity", "Error capturando foto: ${exception.message}")
+                    // Salir sin foto aunque falle
+                    val returnIntent = intent
+                    returnIntent.putExtra(RESULT_LOCATION, currentLocation)
+                    setResult(Activity.RESULT_OK, returnIntent)
+                    finish()
+                }
+            }
+        )
     }
 
     override fun onDestroy() {

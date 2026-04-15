@@ -92,8 +92,8 @@
 
         <Button
             android:id="@+id/btnConfirm"
-            android:layout_width="200dp"
-            android:layout_height="50dp"
+            android:layout_width="320dp"
+            android:layout_height="60dp"
             android:text="Confirmar (0/3)"
             android:textSize="16sp"
             android:enabled="false"
@@ -103,7 +103,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Espera 3 detecciones correctas"
+            android:text="Espera 4 detecciones correctas"
             android:textColor="#AAAAAA"
             android:textSize="11sp"
             android:layout_marginTop="8dp" />

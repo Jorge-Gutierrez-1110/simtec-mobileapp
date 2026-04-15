@@ -90,6 +90,13 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Obtiene el ID del empleado
+     */
+    fun getEmpleadoId(): Int {
+        return prefs.getInt("empleado_id", -1)
+    }
+
+    /**
      * Obtiene el nombre del usuario
      */
     fun getUserName(): String {
@@ -101,6 +108,24 @@ class SessionManager(context: Context) {
      */
     fun getEmail(): String {
         return prefs.getString("email", "") ?: ""
+    }
+
+    /**
+     * Guarda el email del último login para usar con huella
+     * Se guarda aunque la sesión expire, para poder usar huella la próxima vez
+     */
+    fun saveLastEmail(email: String) {
+        prefs.edit()
+            .putString("saved_email", email)
+            .apply()
+        Log.d(TAG, "Email guardado para huella: $email")
+    }
+
+    /**
+     * Obtiene el email guardado para huella
+     */
+    fun getSavedEmail(): String {
+        return prefs.getString("saved_email", "") ?: ""
     }
 
     /**
@@ -145,6 +170,16 @@ class SessionManager(context: Context) {
     fun logout() {
         Log.d(TAG, "Logout ejecutado para: ${getEmail()}")
         prefs.edit().clear().apply()
+    }
+
+    /**
+     * Limpia los datos de asistencia (para nuevo login)
+     */
+    fun clearAttendanceData() {
+        prefs.edit()
+            .remove("attendance_records_json")
+            .remove("last_record_type")
+            .apply()
     }
 
     /**
@@ -233,6 +268,23 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Guarda la hora de entrada del último registro
+     * Se usa para enviar siempre la hora de entrada al registrar salida
+     */
+    fun saveLastHoraEntrada(hora: String) {
+        prefs.edit()
+            .putString("last_hora_entrada", hora)
+            .apply()
+    }
+
+    /**
+     * Obtiene la hora de entrada del último registro
+     */
+    fun getLastHoraEntrada(): String? {
+        return prefs.getString("last_hora_entrada", null)
+    }
+
+    /**
      * Obtiene el último tipo de registro guardado
      * Si es "Entrada", el próximo debe ser "Salida" y viceversa
      */
@@ -250,6 +302,60 @@ class SessionManager(context: Context) {
         // Si el último fue "Salida", el próximo es "Entrada"
         // Si el último fue "Entrada", el próximo es "Salida"
         return lastType == null || lastType == "Salida"
+    }
+
+    /**
+     * Guarda el ID de la empresa/cliente actual
+     */
+    fun saveClienteId(id: Int) {
+        prefs.edit().putInt("cliente_id", id).apply()
+    }
+
+    /**
+     * Obtiene el ID de la empresa/cliente guardada
+     */
+    fun getClienteId(): Int {
+        return prefs.getInt("cliente_id", 0)
+    }
+
+    /**
+     * Guarda los datos de geocerca de la empresa
+     */
+    fun saveGeocerca(latitud: Double, longitud: Double, radioMetros: Int, activa: Boolean) {
+        prefs.edit()
+            .putFloat("geocerca_latitud", latitud.toFloat())
+            .putFloat("geocerca_longitud", longitud.toFloat())
+            .putInt("geocerca_radio_metros", radioMetros)
+            .putBoolean("geocerca_activa", activa)
+            .apply()
+    }
+
+    /**
+     * Obtiene si la geocerca está activa
+     */
+    fun isGeocercaActiva(): Boolean {
+        return prefs.getBoolean("geocerca_activa", false)
+    }
+
+    /**
+     * Obtiene la latitud de la oficina
+     */
+    fun getGeocercaLatitud(): Double {
+        return prefs.getFloat("geocerca_latitud", 0f).toDouble()
+    }
+
+    /**
+     * Obtiene la longitud de la oficina
+     */
+    fun getGeocercaLongitud(): Double {
+        return prefs.getFloat("geocerca_longitud", 0f).toDouble()
+    }
+
+    /**
+     * Obtiene el radio de la geocerca en metros
+     */
+    fun getGeocercaRadioMetros(): Int {
+        return prefs.getInt("geocerca_radio_metros", 1000)
     }
 
     /**
