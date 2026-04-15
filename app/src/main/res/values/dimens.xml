@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Text Sizes -->
+    <dimen name='text_title'>24sp</dimen>
+    <dimen name='text_subtitle'>14sp</dimen>
+    <dimen name='text_body'>15sp</dimen>
+    <dimen name='text_caption'>12sp</dimen>
+    <dimen name='text_small'>11sp</dimen>
+    <dimen name='text_large'>18sp</dimen>
+    
+    <!-- Border Radius -->
+    <dimen name='radius_small'>8dp</dimen>
+    <dimen name='radius_medium'>12dp</dimen>
+    <dimen name='radius_large'>16dp</dimen>
+    
+    <!-- Elevation / Shadows -->
+    <dimen name='elevation_card'>8dp</dimen>
+    <dimen name='elevation_dialog'>12dp</dimen>
+    <dimen name='elevation_button'>4dp</dimen>
+    
+    <!-- Padding / Margins -->
+    <dimen name='spacing_xs'>4dp</dimen>
+    <dimen name='spacing_small'>8dp</dimen>
+    <dimen name='spacing_medium'>16dp</dimen>
+    <dimen name='spacing_large'>24dp</dimen>
+    <dimen name='spacing_xl'>32dp</dimen>
+    
+    <!-- Component Sizes -->
+    <dimen name='button_height'>48dp</dimen>
+    <dimen name='input_height'>48dp</dimen>
+    <dimen name='avatar_size'>40dp</dimen>
+    <dimen name='icon_size_small'>16dp</dimen>
+    <dimen name='icon_size_medium'>20dp</dimen>
+    <dimen name='icon_size_large'>24dp</dimen>
+    
+    <!-- Sidebar -->
+    <dimen name='sidebar_width'>260dp</dimen>
+    <dimen name='nav_item_height'>48dp</dimen>
+</resources>

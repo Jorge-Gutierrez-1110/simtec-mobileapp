@@ -1,33 +1,59 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
+    <!-- === COLORES WEB ADAPTADOS === -->
+    <color name='primary'>#0052cc</color>
+    <color name='primary_dark'>#0747a6</color>
+    <color name='primary_light'>#2684ff</color>
+    
+    <color name='success'>#36b37e</color>
+    <color name='danger'>#ff5630</color>
+    <color name='warning'>#ffab00</color>
+    
+    <color name='background'>#f4f5f7</color>
+    <color name='surface'>#ffffff</color>
+    <color name='white'>#ffffff</color>
+    
+    <color name='text_primary'>#172b4d</color>
+    <color name='text_secondary'>#6b778c</color>
+    <color name='text_light'>#97a0af</color>
+    
+    <!-- Sidebar - Estilo Web -->
+    <color name='sidebar'>#0f172a</color>
+    <color name='sidebar_header'>#0b1120</color>
+    <color name='sidebar_item_active'>#2684ff</color>
+    
+    <!-- Login -->
+    <color name='login_button'>#0056b3</color>
+    <color name='input_background'>#f8fafc</color>
+    <color name='input_border'>#e2e8f0</color>
+    <color name='error_background'>#fee2e2</color>
+    <color name='error_text'>#991b1b</color>
+    <color name='link_color'>#007bff</color>
+    
+    <!-- === COLORES APP ORIGINALES (CONSERVADOS) === -->
+    <!-- Asistencia -->
+    <color name='green_entry'>#10B981</color>
+    <color name='green_light'>#D1FAE5</color>
+    <color name='green_mint'>#ECFDF5</color>
+    <color name='green_success'>#059669</color>
+    
+    <color name='red_exit'>#EF4444</color>
+    <color name='red_light'>#FEE2E2</color>
+    <color name='coral'>#F87171</color>
+    
+    <!-- Legacy (mantener compatibilidad) -->
+    <color name='blue_dark'>#1C2A43</color>
+    <color name='blue_medium'>#3F5E8C</color>
+    <color name='blue_light'>#E8EDF5</color>
+    <color name='background_gray'>#F5F7FA</color>
+    <color name='text_gray'>#9CA3AF</color>
 
-    <color name="blue_dark">#1C2A43</color>
-    <color name="blue_medium">#3F5E8C</color>
-    <color name="blue_light">#E8EDF5</color>
+    <color name='border'>#E5E7EB</color>
+    <color name='card_bg'>#FFFFFF</color>
+    <color name='divider'>#F3F4F6</color>
+    <color name='line_gray'>#E5E7EB</color>
 
-    <color name="background">#F5F7FA</color>
-    <color name="background_gray">#F5F7FA</color>
-    <color name="white">#FFFFFF</color>
-
-    <color name="green_entry">#10B981</color>
-    <color name="green_light">#D1FAE5</color>
-    <color name="green_mint">#ECFDF5</color>
-    <color name="green_success">#059669</color>
-
-    <color name="red_exit">#EF4444</color>
-    <color name="red_light">#FEE2E2</color>
-    <color name="coral">#F87171</color>
-
-    <color name="text_primary">#1C2A43</color>
-    <color name="text_secondary">#6B7280</color>
-    <color name="text_gray">#9CA3AF</color>
-    <color name="text_light">#D1D5DB</color>
-
-    <color name="border">#E5E7EB</color>
-    <color name="card_bg">#FFFFFF</color>
-    <color name="divider">#F3F4F6</color>
-
-    <color name="primary">#3F5E8C</color>
-    <color name="line_gray">#E5E7EB</color>
-
+    
+    <!-- Badge -->
+    <color name='badge_red'>#ef4444</color>
 </resources>

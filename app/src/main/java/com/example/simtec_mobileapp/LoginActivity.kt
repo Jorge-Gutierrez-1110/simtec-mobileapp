@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import com.example.simtec_mobileapp.showLoading
+import com.example.simtec_mobileapp.hideLoading
 import kotlinx.coroutines.*
 import java.util.concurrent.Executor
 

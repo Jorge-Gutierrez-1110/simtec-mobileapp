@@ -268,6 +268,23 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Guarda la hora de entrada del último registro
+     * Se usa para enviar siempre la hora de entrada al registrar salida
+     */
+    fun saveLastHoraEntrada(hora: String) {
+        prefs.edit()
+            .putString("last_hora_entrada", hora)
+            .apply()
+    }
+
+    /**
+     * Obtiene la hora de entrada del último registro
+     */
+    fun getLastHoraEntrada(): String? {
+        return prefs.getString("last_hora_entrada", null)
+    }
+
+    /**
      * Obtiene el último tipo de registro guardado
      * Si es "Entrada", el próximo debe ser "Salida" y viceversa
      */

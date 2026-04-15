@@ -26,6 +26,8 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.navigation.NavigationView
+import com.example.simtec_mobileapp.showLoading
+import com.example.simtec_mobileapp.hideLoading
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -282,6 +284,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun loadHistory() {
+        showLoading("Cargando historial...")
         val empleadoId = sessionManager.getEmpleadoId()
         val token = sessionManager.getToken()
 
@@ -343,6 +346,8 @@ class HomeActivity : AppCompatActivity() {
                 Log.e("HomeActivity", "Error cargando historial: ${e.message}")
                 loadSimulatedHistory()
                 historyAdapter.updateRecords(historyItems)
+            } finally {
+                hideLoading()
             }
         }
     }
@@ -448,17 +453,18 @@ class HomeActivity : AppCompatActivity() {
 
         if (requestCode == 100 && resultCode == RESULT_OK) {
             val location = data?.getStringExtra(CameraActivity.RESULT_LOCATION) ?: ""
+            val photoBase64 = data?.getStringExtra(CameraActivity.RESULT_PHOTO)
             Toast.makeText(this, "Cara verificada", Toast.LENGTH_SHORT).show()
 
             if (location.isNotEmpty() && location != "Ubicación no disponible") {
-                saveRegister(location)
+                saveRegister(location, photoBase64)
             } else {
-                checkLocationPermission()
+                checkLocationPermissionAndSave(photoBase64)
             }
         }
     }
 
-    private fun checkLocationPermission() {
+    private fun checkLocationPermissionAndSave(photoBase64: String?) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -467,25 +473,25 @@ class HomeActivity : AppCompatActivity() {
                 PERMISSION_LOCATION_CODE
             )
         } else {
-            obtainLocationAndSaveRecord()
+            obtainLocationAndSaveRecord(photoBase64)
         }
     }
 
-    private fun obtainLocationAndSaveRecord() {
+    private fun obtainLocationAndSaveRecord(photoBase64: String?) {
         Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
 
         scope.launch {
             try {
                 val location = locationManager.getReadableLocation()
-                saveRegister(location)
+                saveRegister(location, photoBase64)
             } catch (e: Exception) {
                 e.printStackTrace()
-                saveRegister("Error obteniendo ubicación")
+                saveRegister("Error obteniendo ubicación", photoBase64)
             }
         }
     }
 
-    private fun saveRegister(location: String) {
+    private fun saveRegister(location: String, photoBase64: String? = null) {
         val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val sdfTime = SimpleDateFormat("HH:mm", Locale.getDefault())
         val sdfDisplay = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("es", "ES"))
@@ -507,7 +513,7 @@ class HomeActivity : AppCompatActivity() {
 
                 ApiClient().setAuthToken(token)
 
-                val horaEntrada = if (isEntry) hora else null
+                val horaEntrada = if (isEntry) hora else sessionManager.getLastHoraEntrada()
                 val horaSalida = if (!isEntry) hora else null
 
                 val response = ApiClient().saveAttendance(
@@ -515,7 +521,9 @@ class HomeActivity : AppCompatActivity() {
                     fecha = fecha,
                     horaEntrada = horaEntrada,
                     horaSalida = horaSalida,
-                    tipo = type
+                    tipo = type,
+                    ubicacion = location,
+                    foto = photoBase64
                 )
 
                 if (response?.success == true) {
@@ -526,6 +534,9 @@ class HomeActivity : AppCompatActivity() {
                         faceConfidence = 0.9f
                     )
                     sessionManager.saveLastRecordType(type)
+                    if (isEntry) {
+                        sessionManager.saveLastHoraEntrada(hora)
+                    }
 
                     runOnUiThread {
                         showSuccessBanner(type, timeDisplay)
@@ -534,16 +545,16 @@ class HomeActivity : AppCompatActivity() {
                         Toast.makeText(this@HomeActivity, "Asistencia registrada", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    saveLocal(location, type, timeDisplay)
+                    saveLocal(location, type, timeDisplay, photoBase64)
                 }
 
             } catch (e: Exception) {
-                saveLocal(location, type, timeDisplay)
+                saveLocal(location, type, timeDisplay, photoBase64)
             }
         }
     }
 
-    private fun saveLocal(location: String, type: String, timeDisplay: String) {
+    private fun saveLocal(location: String, type: String, timeDisplay: String, photoBase64: String? = null) {
         sessionManager.saveAttendanceRecord(
             type = type,
             timestamp = "$timeDisplay (local)",
@@ -551,6 +562,10 @@ class HomeActivity : AppCompatActivity() {
             faceConfidence = 0.9f
         )
         sessionManager.saveLastRecordType(type)
+        if (type == "Entrada") {
+            val sdfTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+            sessionManager.saveLastHoraEntrada(sdfTime.format(Date()))
+        }
 
         runOnUiThread {
             showSuccessBanner(type, timeDisplay)

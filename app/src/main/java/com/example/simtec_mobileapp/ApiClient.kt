@@ -110,7 +110,9 @@ class ApiClient {
         fecha: String,
         horaEntrada: String?,
         horaSalida: String?,
-        tipo: String
+        tipo: String,
+        ubicacion: String? = null,
+        foto: String? = null
     ): AttendanceResponse? {
         return try {
             val payload = JsonObject().apply {
@@ -118,7 +120,9 @@ class ApiClient {
                 addProperty("fecha", fecha)
                 if (horaEntrada != null) addProperty("hora_entrada", horaEntrada)
                 if (horaSalida != null) addProperty("hora_salida", horaSalida)
-                addProperty("dispositivo", "app_android")
+                addProperty("dispositivo", "mobile")
+                if (ubicacion != null) addProperty("ubicacion", ubicacion)
+                if (foto != null) addProperty("foto", foto)
             }
 
             val requestBody = gson.toJson(payload)
@@ -138,6 +142,8 @@ class ApiClient {
             Log.d("ApiClient", "📤 GUARDANDO ASISTENCIA")
             Log.d("ApiClient", "  URL: ${request.url}")
             Log.d("ApiClient", "  Empleado: $empleadoId, Tipo: $tipo, Fecha: $fecha")
+            Log.d("ApiClient", "  Ubicación: ${ubicacion?.take(50)}...")
+            Log.d("ApiClient", "  Foto: ${if (foto != null) "Presente (${foto.length} chars)" else "NULL"}")
 
             val response = withContext(Dispatchers.IO) {
                 httpClient.newCall(request).execute()

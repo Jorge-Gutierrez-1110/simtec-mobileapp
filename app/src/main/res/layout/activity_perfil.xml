@@ -54,7 +54,7 @@
                     android:id="@+id/tvNombre"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Juan Pérez García"
+                    android:text="Juan Pérez"
                     android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
