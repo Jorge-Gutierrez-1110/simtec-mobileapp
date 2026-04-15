@@ -75,7 +75,7 @@ class PerfilActivity : AppCompatActivity() {
 
     private fun loadPerfil() {
         showLoading(true)
-        
+
         val sessionManager = SessionManager(this)
         val empleadoId = sessionManager.getEmpleadoId()
 
@@ -90,10 +90,21 @@ class PerfilActivity : AppCompatActivity() {
                 apiClient.setAuthToken(sessionManager.getToken())
 
                 val perfil = apiClient.getEmpleadoCompleto(empleadoId)
+
+                var empresaNombre = perfil?.empresa_nombre ?: "No asignada"
+                val clienteId = perfil?.cliente_id
+
+                if (clienteId != null && clienteId > 0) {
+                    val empresa = apiClient.getCatalogoById("clientes", clienteId)
+                    if (empresa != null) {
+                        empresaNombre = empresa["nombre_comercial"]?.toString() ?: empresaNombre
+                    }
+                }
+
                 showLoading(false)
 
                 if (perfil != null) {
-                    displayPerfil(perfil)
+                    displayPerfil(perfil, empresaNombre)
                 } else {
                     showError("Error al cargar perfil")
                 }
@@ -105,7 +116,7 @@ class PerfilActivity : AppCompatActivity() {
         }
     }
 
-    private fun displayPerfil(p: ApiClient.EmpleadoPerfil) {
+    private fun displayPerfil(p: ApiClient.EmpleadoPerfil, empresaNombre: String) {
         tvNombre.text = "${p.nombre} ${p.apellido_paterno} ${p.apellido_materno ?: ""}"
         tvPuesto.text = p.puesto ?: "Sin puesto"
         tvNumeroEmpleado.text = "EMP-${p.numero_empleado}"
@@ -118,7 +129,7 @@ class PerfilActivity : AppCompatActivity() {
         setRowValue(rowNSS, "NSS", p.nss ?: "No registrado")
 
         // Datos Laborales
-        setRowValue(rowEmpresa, "Empresa", p.empresa_nombre ?: "No asignada")
+        setRowValue(rowEmpresa, "Empresa", empresaNombre)
         setRowValue(rowTurno, "Turno", p.nombre_turno ?: "No asignado")
         setRowValue(rowHorario, "Horario", "${p.hora_entrada ?: "--:--"} - ${p.hora_salida ?: "--:--"}")
         setRowValue(rowFechaIngreso, "Fecha de Ingreso", formatFecha(p.fecha_ingreso))

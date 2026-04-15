@@ -305,8 +305,50 @@ class LoginActivity : AppCompatActivity() {
 
     private fun goToHome() {
         sessionManager.clearAttendanceData()
-        startActivity(Intent(this, HomeActivity::class.java))
-        finish()
+
+        scope.launch {
+            try {
+                val empleadoId = sessionManager.getEmpleadoId()
+                if (empleadoId > 0) {
+                    apiClient.setAuthToken(sessionManager.getToken())
+
+                    val empleado = apiClient.getEmpleadoCompleto(empleadoId)
+                    val clienteId = empleado?.cliente_id
+
+                    if (clienteId != null && clienteId > 0) {
+                        val empresa = apiClient.getCatalogoById("clientes", clienteId)
+
+                        if (empresa != null) {
+                            val geocercaActiva = empresa["geocerca_activa"]?.toString()?.toIntOrNull() ?: 0
+                            val geocercaLat = empresa["geocerca_latitud"]?.toString()?.toDoubleOrNull()
+                            val geocercaLng = empresa["geocerca_longitud"]?.toString()?.toDoubleOrNull()
+                            val geocercaRadio = empresa["geocerca_radio_metros"]?.toString()?.toIntOrNull() ?: 1000
+
+                            if (geocercaActiva == 1 && geocercaLat != null && geocercaLng != null) {
+                                sessionManager.saveGeocerca(
+                                    latitud = geocercaLat,
+                                    longitud = geocercaLng,
+                                    radioMetros = geocercaRadio,
+                                    activa = true
+                                )
+                                Log.d("LoginActivity", "✅ Geocerca guardada: lat=$geocercaLat, lng=$geocercaLng, radio=$geocercaRadio")
+                            } else {
+                                sessionManager.saveGeocerca(latitud = 0.0, longitud = 0.0, radioMetros = 1000, activa = false)
+                                Log.d("LoginActivity", "⚠️ Geocerca no configurada para empresa ID $clienteId")
+                            }
+                        }
+                    } else {
+                        sessionManager.saveGeocerca(latitud = 0.0, longitud = 0.0, radioMetros = 1000, activa = false)
+                        Log.d("LoginActivity", "⚠️ Sin empresa asignada")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LoginActivity", "Error obteniendo datos: ${e.message}")
+            }
+
+            startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
+            finish()
+        }
     }
 
     private fun loadSavedCredentials() {

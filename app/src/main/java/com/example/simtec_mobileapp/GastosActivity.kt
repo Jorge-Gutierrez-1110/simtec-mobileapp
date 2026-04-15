@@ -192,12 +192,14 @@ class GastosActivity : AppCompatActivity() {
                 )
 
                 runOnUiThread {
-                    if (result?.success == true) {
-                        showSuccess("Gasto solicitado")
+                    val success = result?.get("success") as? Boolean ?: false
+                    if (success) {
+                        showSuccess("Gasto solicitada")
                         dialog.dismiss()
                         loadGastos()
                     } else {
-                        showError(result?.message ?: "Error")
+                        val msg = result?.get("message") as? String ?: "Error"
+                        showError(msg)
                     }
                 }
             }

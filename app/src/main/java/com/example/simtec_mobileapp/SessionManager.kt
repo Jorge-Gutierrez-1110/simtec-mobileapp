@@ -305,6 +305,46 @@ class SessionManager(context: Context) {
     }
 
     /**
+     * Guarda los datos de geocerca de la empresa
+     */
+    fun saveGeocerca(latitud: Double, longitud: Double, radioMetros: Int, activa: Boolean) {
+        prefs.edit()
+            .putFloat("geocerca_latitud", latitud.toFloat())
+            .putFloat("geocerca_longitud", longitud.toFloat())
+            .putInt("geocerca_radio_metros", radioMetros)
+            .putBoolean("geocerca_activa", activa)
+            .apply()
+    }
+
+    /**
+     * Obtiene si la geocerca está activa
+     */
+    fun isGeocercaActiva(): Boolean {
+        return prefs.getBoolean("geocerca_activa", false)
+    }
+
+    /**
+     * Obtiene la latitud de la oficina
+     */
+    fun getGeocercaLatitud(): Double {
+        return prefs.getFloat("geocerca_latitud", 0f).toDouble()
+    }
+
+    /**
+     * Obtiene la longitud de la oficina
+     */
+    fun getGeocercaLongitud(): Double {
+        return prefs.getFloat("geocerca_longitud", 0f).toDouble()
+    }
+
+    /**
+     * Obtiene el radio de la geocerca en metros
+     */
+    fun getGeocercaRadioMetros(): Int {
+        return prefs.getInt("geocerca_radio_metros", 1000)
+    }
+
+    /**
      * Data class para un registro de asistencia
      */
     data class AttendanceRecord(

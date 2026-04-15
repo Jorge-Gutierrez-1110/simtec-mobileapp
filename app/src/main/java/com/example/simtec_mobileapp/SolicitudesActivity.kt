@@ -21,6 +21,11 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.launch
 
+import com.example.simtec_mobileapp.Periodo
+import com.example.simtec_mobileapp.EmpleadoNomina
+import com.example.simtec_mobileapp.Concepto
+import com.example.simtec_mobileapp.ApiClient.NominaSolicitud
+
 class SolicitudesActivity : AppCompatActivity() {
 
     private lateinit var toolbar: MaterialToolbar
@@ -32,7 +37,7 @@ class SolicitudesActivity : AppCompatActivity() {
     private lateinit var tvPendientes: TextView
     private lateinit var fabAgregar: FloatingActionButton
 
-    private var solicitudes: List<ApiClient.NominaSolicitud> = emptyList()
+    private var solicitudes: List<NominaSolicitud> = emptyList()
     private var currentTab = 0
     private var puedeAprobar = false
     
@@ -162,17 +167,18 @@ class SolicitudesActivity : AppCompatActivity() {
             val result = apiClient.responderNominaSolicitud(
                 solicitudId,
                 accion,
-                comentario,
-                session.getEmpleadoId()
+                comentario
             )
 
             showLoading(false)
 
-            if (result?.success == true) {
+            val success = result?.get("success") as? Boolean ?: false
+            if (success) {
                 showSuccess(if (accion == "APROBADO") "Aprobado" else "Rechazado")
                 loadSolicitudes()
             } else {
-                showError(result?.message ?: "Error")
+                val msg = result?.get("message") as? String ?: "Error"
+                showError(msg)
             }
         }
     }
@@ -256,12 +262,14 @@ class SolicitudesActivity : AppCompatActivity() {
 
                     progressLayout.visibility = View.GONE
 
-                    if (result?.success == true) {
+                    val success = result?.get("success") as? Boolean ?: false
+                    if (success) {
                         showSuccess("Solicitud enviada")
                         dialog.dismiss()
                         loadSolicitudes()
                     } else {
-                        showError(result?.message ?: "Error al enviar")
+                        val msg = result?.get("message") as? String ?: "Error al enviar"
+                        showError(msg)
                         btnEnviar.isEnabled = true
                     }
                 } catch (e: Exception) {
@@ -330,9 +338,9 @@ class SolicitudesActivity : AppCompatActivity() {
 }
 
 class SolicitudesAdapter(
-    private val solicitudes: List<ApiClient.NominaSolicitud>,
+    private val solicitudes: List<NominaSolicitud>,
     private val puedeAprobar: Boolean,
-    private val onAction: (ApiClient.NominaSolicitud, String) -> Unit
+    private val onAction: (NominaSolicitud, String) -> Unit
 ) : RecyclerView.Adapter<SolicitudesAdapter.ViewHolder>() {
 
     class ViewHolder(view: android.view.View) : RecyclerView.ViewHolder(view) {

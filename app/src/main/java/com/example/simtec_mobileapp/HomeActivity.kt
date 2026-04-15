@@ -31,6 +31,7 @@ import com.example.simtec_mobileapp.hideLoading
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.pow
 
 class HomeActivity : AppCompatActivity() {
 
@@ -55,9 +56,11 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var navHeaderRol: TextView
 
     private lateinit var sessionManager: SessionManager
-    private lateinit var locationManager: LocationManager
+    private lateinit var locationManagerCustom: LocationManager
     private lateinit var historyAdapter: HistoryAdapter
     private val historyItems = mutableListOf<HistoryAdapter.HistoryItem>()
+
+    private lateinit var androidLocationManager: android.location.LocationManager
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val handler = Handler(Looper.getMainLooper())
@@ -75,7 +78,8 @@ class HomeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_home)
 
         sessionManager = SessionManager(this)
-        locationManager = LocationManager(this)
+        locationManagerCustom = LocationManager(this)
+        androidLocationManager = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
 
         setupDrawer()
         setupBackPressHandler()
@@ -129,7 +133,7 @@ class HomeActivity : AppCompatActivity() {
                 }
                 R.id.nav_nomina -> {
                     drawerLayout.closeDrawer(GravityCompat.START)
-                    startActivity(Intent(this, NominaActivity::class.java))
+                    startActivity(Intent(this, NominaProcesoActivity::class.java))
                     true
                 }
                 R.id.nav_solicitudes -> {
@@ -398,6 +402,87 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun authenticateUser() {
+        // Primero verificar ubicación
+        checkLocationAndProceed()
+    }
+
+    private fun checkLocationAndProceed() {
+        if (!sessionManager.isGeocercaActiva()) {
+            Log.d("HomeActivity", "Geocerca inactiva - registrando directa")
+            openBiometric()
+            return
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                PERMISSION_LOCATION_CODE
+            )
+            return
+        }
+
+        scope.launch {
+            try {
+                val location = androidLocationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+
+                if (location == null) {
+                    Toast.makeText(this@HomeActivity, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
+                    checkAndOpenMap(null)
+                    return@launch
+                }
+
+                val distance = calculateDistance(
+                    location.latitude, location.longitude,
+                    sessionManager.getGeocercaLatitud(), sessionManager.getGeocercaLongitud()
+                )
+
+                val maxDistance = sessionManager.getGeocercaRadioMetros().toDouble()
+
+                if (distance <= maxDistance) {
+                    runOnUiThread {
+                        Toast.makeText(this@HomeActivity, "Ubicación verificada ✅", Toast.LENGTH_SHORT).show()
+                        openBiometric()
+                    }
+                } else {
+                    runOnUiThread {
+                        checkAndOpenMap(location)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HomeActivity", "Error verificando ubicación: ${e.message}")
+                runOnUiThread {
+                    openBiometric()
+                }
+            }
+        }
+    }
+
+    private fun checkAndOpenMap(location: android.location.Location?) {
+        val distance = if (location != null) {
+            calculateDistance(
+                location.latitude, location.longitude,
+                sessionManager.getGeocercaLatitud(), sessionManager.getGeocercaLongitud()
+            )
+        } else {
+            sessionManager.getGeocercaRadioMetros().toDouble() + 1.0
+        }
+
+        val intent = Intent(this, MapActivity::class.java)
+        startActivityForResult(intent, 101)
+    }
+
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371000.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = kotlin.math.sin(dLat / 2).pow(2) + kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) * kotlin.math.sin(dLon / 2).pow(2)
+        val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(1 - a), kotlin.math.sqrt(a))
+        return r * c
+    }
+
+    private fun openBiometric() {
         val executor = ContextCompat.getMainExecutor(this)
 
         val biometricPrompt = BiometricPrompt(
@@ -431,11 +516,35 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun openFaceDetection() {
+        // Verificar que sigue dentro del rango antes de abrir cámara
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+
+            try {
+                val location = androidLocationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                if (location != null) {
+                    val distance = calculateDistance(
+                        location.latitude, location.longitude,
+                        sessionManager.getGeocercaLatitud(), sessionManager.getGeocercaLongitud()
+                    )
+
+                    if (distance > sessionManager.getGeocercaRadioMetros().toDouble()) {
+                        // Salió del área mientras estaba en proceso
+                        Toast.makeText(this, "Te saliste del área de registro. Abre el mapa para acercarte.", Toast.LENGTH_LONG).show()
+                        checkAndOpenMap(location)
+                        return
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HomeActivity", "Error verificando ubicación: ${e.message}")
+            }
+        }
+
         Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
 
         scope.launch {
             try {
-                val location = locationManager.getReadableLocation()
+                val location = locationManagerCustom.getReadableLocation()
                 val intent = Intent(this@HomeActivity, CameraActivity::class.java)
                 intent.putExtra(CameraActivity.EXTRA_LOCATION, location)
                 startActivityForResult(intent, 100)
@@ -450,6 +559,16 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == 101) {
+            // Resultado del MapActivity (geofence)
+            val withinRange = data?.getBooleanExtra(MapActivity.RESULT_WITHIN_RANGE, false) ?: false
+            if (withinRange) {
+                Toast.makeText(this, "Ubicación verificada ✅", Toast.LENGTH_SHORT).show()
+                openBiometric()
+            }
+            return
+        }
 
         if (requestCode == 100 && resultCode == RESULT_OK) {
             val location = data?.getStringExtra(CameraActivity.RESULT_LOCATION) ?: ""
@@ -482,7 +601,7 @@ class HomeActivity : AppCompatActivity() {
 
         scope.launch {
             try {
-                val location = locationManager.getReadableLocation()
+                val location = locationManagerCustom.getReadableLocation()
                 saveRegister(location, photoBase64)
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -48,4 +48,7 @@
     <string name='comentarios'>Comentarios</string>
     <string name='confirmar'>Confirmar</string>
     <string name='cancelar'>Cancelar</string>
+    <string name='nomina_proceso_title'>Proceso de Nómina</string>
+    <string name='step_seleccionar'>Seleccionar</string>
+    <string name='step_resumen'>Resumen</string>
 </resources>

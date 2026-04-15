@@ -3,13 +3,21 @@ package com.example.simtec_mobileapp
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MediaType.Companion.toMediaType
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
+
+import com.example.simtec_mobileapp.Periodo
+import com.example.simtec_mobileapp.EmpleadoNomina
+import com.example.simtec_mobileapp.NominaResumen
+import com.example.simtec_mobileapp.NominaCierreRequest
+import com.example.simtec_mobileapp.DetalleNomina
 
 class ApiClient {
 
@@ -76,13 +84,13 @@ class ApiClient {
             if (responseBody != null) {
                 try {
                     val loginResponse = gson.fromJson(responseBody, LoginResponse::class.java)
-                    
+
                     Log.d("ApiClient", "PARSEADO EXITOSAMENTE:")
                     Log.d("ApiClient", "  success: ${loginResponse.success}")
                     Log.d("ApiClient", "  token: ${if (loginResponse.token != null) "✓ Presente" else "✗ Null"}")
                     Log.d("ApiClient", "  user: ${if (loginResponse.user != null) "✓ ${loginResponse.user.email}" else "✗ Null"}")
                     Log.d("ApiClient", "  message: ${loginResponse.message}")
-                    
+
                     loginResponse
                 } catch (e: Exception) {
                     Log.e("ApiClient", "❌ ERROR AL PARSEAR JSON: ${e.message}")
@@ -94,7 +102,7 @@ class ApiClient {
                 null
             }
 
-} catch (e: Exception) {
+        } catch (e: Exception) {
             Log.e("ApiClient", "❌ EXCEPCIÓN EN LOGIN: ${e.message}", e)
             e.printStackTrace()
             null
@@ -261,45 +269,6 @@ class ApiClient {
     // ============ NÓMINA API ============
 
     /**
-     * Obtiene la lista de períodos de nómina disponibles
-     */
-    suspend fun getPeriodos(): List<Periodo>? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/periodos")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            Log.d("ApiClient", "📤 OBTENIENDO PERÍODOS")
-            Log.d("ApiClient", "  URL: ${request.url}")
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<Periodo>>() {}.type
-                val periodos: List<Periodo> = gson.fromJson(responseBody, type)
-                Log.d("ApiClient", "  Períodos obtenidos: ${periodos.size}")
-                periodos
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
      * Genera el pre-cálculo de nómina para un período
      */
     suspend fun preCalculoNomina(periodoId: Int): NominaResponse? {
@@ -383,32 +352,28 @@ class ApiClient {
     }
 
     /**
-     * Obtiene el detalle de una nómina por ID
+     * Obtiene un registro de cualquier catálogo por ID
      */
-    suspend fun getNominaDetalle(nominaId: Int): List<EmpleadoNomina>? {
+    suspend fun getCatalogoById(tabla: String, id: Int): Map<String, Any>? {
         return try {
             val request = Request.Builder()
-                .url("$BASE_URL/nomina/detalle/$nominaId")
+                .url("$BASE_URL/config/catalogo/$tabla/$id")
                 .get()
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer $authToken")
                 .build()
 
-            Log.d("ApiClient", "📤 OBTENIENDO DETALLE NÓMINA")
-            Log.d("ApiClient", "  URL: ${request.url}")
+            Log.d("ApiClient", "📤 OBTENIENDO CATALOGO: $tabla id=$id")
 
             val response = withContext(Dispatchers.IO) {
                 httpClient.newCall(request).execute()
             }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
 
             val responseBody = response.body?.string()
             Log.d("ApiClient", "  Response: $responseBody")
 
             if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<EmpleadoNomina>>() {}.type
-                gson.fromJson(responseBody, type)
+                gson.fromJson(responseBody, Map::class.java) as? Map<String, Any>
             } else {
                 null
             }
@@ -418,616 +383,6 @@ class ApiClient {
             null
         }
     }
-
-    /**
-     * Envía la nómina por email
-     */
-    suspend fun enviarEmailNomina(nominaId: Int, email: String): NominaResponse? {
-        return try {
-            val payload = JsonObject().apply {
-                addProperty("nomina_id", nominaId)
-                addProperty("email", email)
-            }
-
-            val requestBody = gson.toJson(payload)
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/enviar-email")
-                .post(requestBody)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            Log.d("ApiClient", "📤 ENVIAR EMAIL NÓMINA")
-            Log.d("ApiClient", "  URL: ${request.url}")
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (responseBody != null) {
-                gson.fromJson(responseBody, NominaResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Obtiene el historial de nóminas
-     */
-    suspend fun getHistorialNomina(): List<NominaResumen>? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/historial")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            Log.d("ApiClient", "📤 OBTENIENDO HISTORIAL NÓMINA")
-            Log.d("ApiClient", "  URL: ${request.url}")
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<NominaResumen>>() {}.type
-                gson.fromJson(responseBody, type)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    // ============ GASTOS API ============
-
-    /**
-     * Obtiene el tablero de gastos
-     */
-    suspend fun getGastosTablero(): List<GastoRecord>? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/gastos/tablero")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            Log.d("ApiClient", "📤 OBTENIENDO GASTOS TABLERO")
-            Log.d("ApiClient", "  URL: ${request.url}")
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<GastoRecord>>() {}.type
-                gson.fromJson(responseBody, type)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Solicitar gasto
-     */
-    suspend fun solicitarGasto(
-        proveedor_id: Int,
-        categoria_id: Int,
-        solicitante_id: Int,
-        beneficiario_id: Int?,
-        concepto: String,
-        subtotal: Double,
-        iva: Double,
-        retenciones: Double,
-        total: Double,
-        fecha_emision: String,
-        fecha_vencimiento: String?,
-        cliente_id: Int?
-    ): ApiResponse? {
-        return try {
-            val payload = JsonObject().apply {
-                addProperty("proveedor_id", proveedor_id)
-                addProperty("categoria_id", categoria_id)
-                addProperty("solicitante_id", solicitante_id)
-                if (beneficiario_id != null) addProperty("beneficiario_id", beneficiario_id)
-                addProperty("concepto", concepto)
-                addProperty("subtotal", subtotal)
-                addProperty("iva", iva)
-                addProperty("retenciones", retenciones)
-                addProperty("total", total)
-                addProperty("fecha_emision", fecha_emision)
-                if (fecha_vencimiento != null) addProperty("fecha_vencimiento", fecha_vencimiento)
-                if (cliente_id != null) addProperty("cliente_id", cliente_id)
-            }
-
-            val requestBody = gson.toJson(payload)
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("$BASE_URL/gastos/solicitar")
-                .post(requestBody)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            Log.d("ApiClient", "📤 SOLICITAR GASTO")
-            Log.d("ApiClient", "  URL: ${request.url}")
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ApiResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Aprobar gasto
-     */
-    suspend fun aprobarGasto(gastoId: Int, aprobador_id: Int): ApiResponse? {
-        return try {
-            val payload = JsonObject().apply {
-                addProperty("aprobador_id", aprobador_id)
-            }
-
-            val requestBody = gson.toJson(payload)
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("$BASE_URL/gastos/aprobar/$gastoId")
-                .put(requestBody)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ApiResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Rechazar gasto
-     */
-    suspend fun rechazarGasto(gastoId: Int, aprobador_id: Int, motivo: String): ApiResponse? {
-        return try {
-            val payload = JsonObject().apply {
-                addProperty("aprobador_id", aprobador_id)
-                addProperty("motivo", motivo)
-            }
-
-            val requestBody = gson.toJson(payload)
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("$BASE_URL/gastos/rechazar/$gastoId")
-                .put(requestBody)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ApiResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Obtenercatálogos de gastos
-     */
-    suspend fun getGastosCatalogos(): GastosCatalogos? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/gastos/catalogos")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (response.isSuccessful && responseBody != null) {
-                gson.fromJson(responseBody, GastosCatalogos::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    data class GastoRecord(
-        val id: Int = 0,
-        val folio: String = "",
-        val proveedor: String? = null,
-        val categoria: String? = null,
-        val categoria_color: String? = null,
-        val solicitante: String? = null,
-        val aprobador: String? = null,
-        val cliente_nombre: String? = null,
-        val concepto: String = "",
-        val subtotal: Double = 0.0,
-        val iva: Double = 0.0,
-        val retenciones: Double = 0.0,
-        val total: Double = 0.0,
-        val estatus: String = "",
-        val fecha_emision: String = "",
-        val fecha_vencimiento: String? = null,
-        val motivo_rechazo: String? = null,
-        val created_at: String = ""
-    )
-
-    data class GastosCatalogos(
-        val categorias: List<CatGasto> = emptyList(),
-        val proveedores: List<Proveedor> = emptyList(),
-        val empleados: List<EmpleadoNomina> = emptyList()
-    )
-
-    data class CatGasto(
-        val id: Int = 0,
-        val nombre: String = "",
-        val color_hex: String = "#64748b"
-    )
-
-    data class Proveedor(
-        val id: Int = 0,
-        val nombre_comercial: String = "",
-        val razon_social: String = "",
-        val rfc: String = ""
-    )
-
-    // ============ SOLICITUDES DE NÓMINA API ============
-
-    /**
-     * Listar solicitudes de nómina
-     */
-    suspend fun getNominaSolicitudes(usuario_id: Int, rol: String, tipo: String): List<NominaSolicitud>? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/solicitudes?usuario_id=$usuario_id&rol=$rol&tipo=$tipo")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            Log.d("ApiClient", "📤 OBTENIENDO SOLICITUDES")
-            Log.d("ApiClient", "  URL: ${request.url}")
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            Log.d("ApiClient", "  Status: ${response.code}")
-
-            val responseBody = response.body?.string()
-            Log.d("ApiClient", "  Response: $responseBody")
-
-            if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<NominaSolicitud>>() {}.type
-                gson.fromJson(responseBody, type)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Crear solicitud de nómina
-     */
-    suspend fun crearNominaSolicitud(
-        empleado_id: Int,
-        solicitante_id: Int,
-        periodo_id: Int,
-        concepto_id: Int,
-        monto: Double,
-        comentarios: String,
-        tipo: String
-    ): ApiResponse? {
-        return try {
-            val payload = JsonObject().apply {
-                addProperty("empleado_id", empleado_id)
-                addProperty("solicitante_id", solicitante_id)
-                addProperty("periodo_id", periodo_id)
-                addProperty("concepto_id", concepto_id)
-                addProperty("monto", monto)
-                addProperty("comentarios", comentarios)
-                addProperty("tipo", tipo)
-            }
-
-            val requestBody = gson.toJson(payload)
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/solicitudes")
-                .post(requestBody)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ApiResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Aprobar/Rechazar solicitud de nómina
-     */
-    suspend fun responderNominaSolicitud(
-        solicitudId: Int,
-        estatus: String,
-        comentarios_cierre: String,
-        aprobador_id: Int
-    ): ApiResponse? {
-        return try {
-            val payload = JsonObject().apply {
-                addProperty("estatus", estatus)
-                addProperty("comentarios_cierre", comentarios_cierre)
-                addProperty("aprobador_id", aprobador_id)
-            }
-
-            val requestBody = gson.toJson(payload)
-                .toRequestBody("application/json".toMediaType())
-
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/solicitudes/$solicitudId")
-                .put(requestBody)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ApiResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Cancelar solicitud de nómina
-     */
-    suspend fun cancelarNominaSolicitud(solicitudId: Int): ApiResponse? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/solicitudes/$solicitudId")
-                .delete()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ApiResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Obtener conteo de solicitudes pendientes
-     */
-    suspend fun getConteoSolicitudesPendientes(usuarioId: Int): ConteoResponse? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/nomina/solicitudes/conteo-pendientes/$usuarioId")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (responseBody != null) {
-                gson.fromJson(responseBody, ConteoResponse::class.java)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    data class NominaSolicitud(
-        val id: Int = 0,
-        val empleado_id: Int = 0,
-        val solicitante_id: Int = 0,
-        val aprobador_id: Int? = null,
-        val periodo_id: Int = 0,
-        val concepto_id: Int = 0,
-        val monto: Double = 0.0,
-        val tipo: String = "",
-        val comentarios_solicitud: String = "",
-        val estatus: String = "",
-        val evidencia_url: String? = null,
-        val created_at: String = "",
-        val emp_nombre: String = "",
-        val emp_apellido: String = "",
-        val sol_nombre: String = "",
-        val sol_apellido: String = "",
-        val concepto_nombre: String = "",
-        val periodo_nombre: String = ""
-    )
-
-    data class ConteoResponse(
-        val total: Int = 0
-    )
-
-    /**
-     * Obtiene empleados para nómina
-     */
-    suspend fun getEmpleadosNomina(): List<EmpleadoNomina>? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/empleados-nomina")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (response.isSuccessful && responseBody != null) {
-                val type = object : com.google.gson.reflect.TypeToken<List<EmpleadoNomina>>() {}.type
-                gson.fromJson(responseBody, type)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    /**
-     * Obtiene conceptos de nómina
-     */
-    suspend fun getConceptosNomina(): List<Concepto>? {
-        return try {
-            val request = Request.Builder()
-                .url("$BASE_URL/config/conceptos-nomina")
-                .get()
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $authToken")
-                .build()
-
-            val response = withContext(Dispatchers.IO) {
-                httpClient.newCall(request).execute()
-            }
-
-            val responseBody = response.body?.string()
-            if (response.isSuccessful && responseBody != null) {
-                val percepcion = Concepto(id = 1, nombre = "Bono Productividad", tipo = "Percepcion")
-                val deduccion = Concepto(id = 2, nombre = "Falta", tipo = "Deduccion")
-                listOf(percepcion, deduccion)
-            } else {
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("ApiClient", "❌ EXCEPCIÓN: ${e.message}", e)
-            null
-        }
-    }
-
-    data class ApiResponse(
-        val success: Boolean = false,
-        val message: String? = null
-    )
 
     /**
      * Obtiene los datos completos del empleado (perfil)
@@ -1109,6 +464,447 @@ class ApiClient {
         val banco: String? = null,
         val cuenta_bancaria: String? = null,
         val clabe_interbancaria: String? = null,
-        val usuario_email: String? = null
+        val usuario_email: String? = null,
+        // Datos de geocerca de la empresa
+        val geocerca_activa: Int? = null,
+        val geocerca_latitud: Double? = null,
+        val geocerca_longitud: Double? = null,
+        val geocerca_radio_metros: Int? = null
     )
+
+    data class GastosCatalogosResponse(
+        val categorias: List<CatGasto>? = null,
+        val proveedores: List<Proveedor>? = null,
+        val empleados: List<EmpleadoBasic>? = null
+    )
+
+    data class CatGasto(
+        val id: Int = 0,
+        val nombre: String = "",
+        val color_hex: String? = null
+    )
+
+    data class Proveedor(
+        val id: Int = 0,
+        val razon_social: String = "",
+        val nombre_comercial: String = "",
+        val rfc: String = "",
+        val telefono: String? = null,
+        val banco: String? = null,
+        val cuenta_clabe: String? = null,
+        val dias_credito: Int = 0
+    )
+
+    data class EmpleadoBasic(
+        val id: Int = 0,
+        val nombre: String = "",
+        val apellido_paterno: String = "",
+        val numero_empleado: String = ""
+    )
+
+    data class GastoRecord(
+        val id: Int = 0,
+        val folio: String? = null,
+        val proveedor_id: Int? = null,
+        val categoria_id: Int? = null,
+        val solicitante_id: Int? = null,
+        val beneficiario_id: Int? = null,
+        val concepto: String = "",
+        val subtotal: Double = 0.0,
+        val iva: Double = 0.0,
+        val retenciones: Double = 0.0,
+        val total: Double = 0.0,
+        val fecha_emision: String? = null,
+        val fecha_vencimiento: String? = null,
+        val factura_url: String? = null,
+        val estatus: String = "",
+        val cliente_id: Int? = null,
+        val created_at: String? = null,
+        val proveedor: String? = null,
+        val categoria: String? = null,
+        val categoria_color: String? = null,
+        val solicitante: String? = null,
+        val cliente_nombre: String? = null,
+        val fecha_pago: String? = null,
+        val pago_url: String? = null
+    )
+
+    suspend fun getGastosCatalogos(): GastosCatalogosResponse? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/gastos/catalogos")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                gson.fromJson(body, GastosCatalogosResponse::class.java)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error catalogo gastos: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun getGastosTablero(): List<GastoRecord>? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/gastos/tablero")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                val type = object : com.google.gson.reflect.TypeToken<List<GastoRecord>>() {}.type
+                gson.fromJson(body, type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error tablero gastos: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun solicitarGasto(
+        proveedor_id: Int,
+        categoria_id: Int,
+        solicitante_id: Int,
+        beneficiario_id: Int?,
+        concepto: String,
+        subtotal: Double,
+        iva: Double,
+        retenciones: Double,
+        total: Double,
+        fecha_emision: String,
+        fecha_vencimiento: String?,
+        cliente_id: Int?
+    ): Map<String, Any>? {
+        return try {
+            val json = gson.toJson(mapOf(
+                "proveedor_id" to proveedor_id,
+                "categoria_id" to categoria_id,
+                "solicitante_id" to solicitante_id,
+                "beneficiario_id" to (beneficiario_id ?: ""),
+                "concepto" to concepto,
+                "subtotal" to subtotal,
+                "iva" to iva,
+                "retenciones" to retenciones,
+                "total" to total,
+                "fecha_emision" to fecha_emision,
+                "fecha_vencimiento" to (fecha_vencimiento ?: ""),
+                "cliente_id" to (cliente_id ?: "")
+            ))
+
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$BASE_URL/gastos/solicitar")
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                gson.fromJson(body, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error solicitar gasto: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun getPeriodos(): List<Periodo>? {
+        return try {
+            val anio = Calendar.getInstance().get(Calendar.YEAR)
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/periodos?anio=$anio")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                val type = object : TypeToken<List<Periodo>>() {}.type
+                @Suppress("UNCHECKED_CAST")
+                (gson.fromJson(body, type) as? List<Periodo>)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error getPeriodos: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun cerrarNominaAsMap(request: NominaCierreRequest): Map<String, Any>? {
+        return try {
+            val json = gson.toJson(request)
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            val httpRequest = Request.Builder()
+                .url("$BASE_URL/nomina/cerrar")
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(httpRequest).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                gson.fromJson(body, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error cerrarNominaAsMap: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun enviarEmailNomina(nominaId: Int, email: String): Map<String, Any>? {
+        return try {
+            val json = gson.toJson(mapOf("nomina_id" to nominaId, "email" to email))
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/enviar-email")
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                gson.fromJson(body, object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error enviarEmailNomina: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun getNominaDetalle(nominaId: Int): List<EmpleadoNomina>? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/detalle/$nominaId")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                val type = object : TypeToken<List<EmpleadoNomina>>() {}.type
+                gson.fromJson(body, type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error getNominaDetalle: ${e.message}")
+            null
+        }
+    }
+
+    // ============ SOLICITUDES DE NÓMINA ============
+
+    data class NominaSolicitud(
+        val id: Int = 0,
+        val emp_nombre: String = "",
+        val emp_apellido: String = "",
+        val tipo: String = "",
+        val concepto_nombre: String = "",
+        val periodo_nombre: String = "",
+        val periodo_id: Int = 0,
+        val monto: Double = 0.0,
+        val estatus: String = "PENDIENTE",
+        val comentarios: String? = null,
+        val evidencia_url: String? = null,
+        val solicitante_id: Int = 0,
+        val aprobador_id: Int? = null,
+        val concepto_id: Int = 0
+    )
+
+    suspend fun getEmpleadosNomina(): List<EmpleadoNomina>? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/empleados-nomina")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                val type = object : TypeToken<List<EmpleadoNomina>>() {}.type
+                @Suppress("UNCHECKED_CAST")
+                gson.fromJson(body, type) as? List<EmpleadoNomina>
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error getEmpleadosNomina: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun getConceptosNomina(): List<Concepto>? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/config/catalogo/cat_conceptos_nomina")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                val type = object : TypeToken<List<Concepto>>() {}.type
+                @Suppress("UNCHECKED_CAST")
+                gson.fromJson(body, type) as? List<Concepto>
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error getConceptosNomina: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun getNominaSolicitudes(usuarioId: Int, rol: String, tipo: String): List<NominaSolicitud>? {
+        return try {
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/solicitudes?usuario_id=$usuarioId&rol=$rol&tipo=$tipo")
+                .get()
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                val type = object : TypeToken<List<NominaSolicitud>>() {}.type
+                @Suppress("UNCHECKED_CAST")
+                gson.fromJson(body, type) as? List<NominaSolicitud>
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error getNominaSolicitudes: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun responderNominaSolicitud(id: Int, estatus: String, comentarios: String?): Map<String, Any>? {
+        return try {
+            val json = gson.toJson(mapOf(
+                "estatus" to estatus,
+                "comentarios" to (comentarios ?: "")
+            ))
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/solicitudes/$id")
+                .put(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                gson.fromJson(body, object : TypeToken<Map<String, Any>>() {}.type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error responderNominaSolicitud: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun crearNominaSolicitud(
+        empleado_id: Int,
+        solicitante_id: Int,
+        periodo_id: Int,
+        concepto_id: Int,
+        monto: Double,
+        comentarios: String?,
+        tipo: String
+    ): Map<String, Any>? {
+        return try {
+            val json = gson.toJson(mapOf(
+                "empleado_id" to empleado_id,
+                "solicitante_id" to solicitante_id,
+                "periodo_id" to periodo_id,
+                "concepto_id" to concepto_id,
+                "monto" to monto,
+                "comentarios" to (comentarios ?: ""),
+                "tipo" to tipo
+            ))
+            val requestBody = json.toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$BASE_URL/nomina/solicitudes")
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $authToken")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                httpClient.newCall(request).execute()
+            }
+
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                gson.fromJson(body, object : TypeToken<Map<String, Any>>() {}.type)
+            } else null
+
+        } catch (e: Exception) {
+            Log.e("ApiClient", "Error crearNominaSolicitud: ${e.message}")
+            null
+        }
+    }
 }

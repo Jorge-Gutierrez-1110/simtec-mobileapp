@@ -40,6 +40,8 @@ android {
 }
 
 dependencies {
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -72,5 +74,6 @@ dependencies {
     implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("de.hdodenhof:circleimageview:3.1.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
 }
